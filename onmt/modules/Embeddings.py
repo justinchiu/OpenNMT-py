@@ -143,3 +143,38 @@ class Embeddings(nn.Module):
         aeq(emb_size, self.embedding_size)
 
         return emb
+
+class PhraseEmbeddings(Embeddings):
+    """
+    Words embeddings dictionary for encoder/decoder.
+
+    Args:
+        word_vec_size (int): size of the dictionary of embeddings.
+        position_encoding (bool): use a sin to mark relative words positions.
+        feat_merge (string): merge action for the features embeddings:
+                    concat, sum or mlp.
+        feat_vec_exponent (float): when using '-feat_merge concat', feature
+                    embedding size is N^feat_dim_exponent, where N is the
+                    number of values of feature takes.
+        feat_vec_size (int): embedding dimension for features when using
+                    '-feat_merge mlp'
+        dropout (float): dropout probability.
+        word_padding_idx (int): padding index for words in the embeddings.
+        feats_padding_idx ([int]): padding index for a list of features
+                                   in the embeddings.
+        word_vocab_size (int): size of dictionary of embeddings for words.
+        feat_vocab_sizes ([int], optional): list of size of dictionary
+                                    of embeddings for each feature.
+    """
+    def __init__(self, word_vec_size, position_encoding, feat_merge,
+                 feat_vec_exponent, feat_vec_size, dropout,
+                 word_padding_idx, feat_padding_idx,
+                 word_vocab_size, feat_vocab_sizes=[]):
+        self.comp = comp
+        pass
+
+
+    def forward(self, input):
+        in_length, in_batch, nfeat = input.size()
+        return comp(input)
+
