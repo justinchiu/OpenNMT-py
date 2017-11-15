@@ -177,4 +177,3 @@ class PhraseEmbeddings(Embeddings):
     def forward(self, input):
         in_length, in_batch, nfeat = input.size()
         return comp(input)
-
