@@ -68,6 +68,7 @@ def main():
         opt.src_seq_length, opt.tgt_seq_length,
         src_seq_length_trunc=opt.src_seq_length_trunc,
         tgt_seq_length_trunc=opt.tgt_seq_length_trunc,
+        use_filter_pred=opt.src_seq_length != 0 and opt.tgt_seq_length != 0,
         dynamic_dict=opt.dynamic_dict)
     print("Building Vocab...")
     onmt.IO.build_vocab(train, opt)
@@ -78,6 +79,7 @@ def main():
         opt.src_seq_length, opt.tgt_seq_length,
         src_seq_length_trunc=opt.src_seq_length_trunc,
         tgt_seq_length_trunc=opt.tgt_seq_length_trunc,
+        use_filter_pred=opt.src_seq_length != 0 and opt.tgt_seq_length != 0,
         dynamic_dict=opt.dynamic_dict)
     print("Saving train/valid/fields")
 

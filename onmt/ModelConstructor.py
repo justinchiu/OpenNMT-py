@@ -12,6 +12,7 @@ from onmt.Models import NMTModel, MeanEncoder, RNNEncoder, \
 from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
                          CNNEncoder, CNNDecoder
+from onmt.modules.Embeddings import PhraseEmbeddings
 
 
 def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
@@ -36,6 +37,23 @@ def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
     num_feat_embeddings = [len(feat_dict) for feat_dict in
                            feature_dicts]
 
+    if hasattr(word_dict, "unigram_size"):
+        return PhraseEmbeddings(
+            embedding_dim,
+            opt.position_encoding,
+            opt.dropout,
+            word_padding_idx,
+            word_dict.unigram_size,
+            word_dict.idx_mapping,
+            nn.LSTM(
+                input_size=embedding_dim,
+                hidden_size=int(embedding_dim/2),
+                num_layers=1,
+                bias=False,
+                batch_first=False,
+                bidirectional=True
+            )
+        )
     return Embeddings(embedding_dim,
                       opt.position_encoding,
                       opt.feat_merge,
@@ -46,6 +64,29 @@ def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
                       feats_padding_idx,
                       num_word_embeddings,
                       num_feat_embeddings)
+
+
+def make_phrase_embeddings(opt, word_dict):
+    """
+    Make an Embeddings instance.
+    Args:
+        opt: the option in current environment.
+        word_dict(Vocab): words dictionary.
+    """
+    embedding_dim = opt.src_word_vec_size
+
+    word_padding_idx = word_dict.stoi[onmt.IO.PAD_WORD]
+    num_word_embeddings = len(word_dict)
+
+    return PhraseEmbeddings(
+        embedding_dim,
+        opt.position_encoding,
+        opt.dropout,
+        word_padding_idx,
+        num_word_embeddings,
+        opt.phrase_mappings,
+        opt.comp_fn
+    )
 
 
 def make_encoder(opt, embeddings):

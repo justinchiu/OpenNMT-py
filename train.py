@@ -195,8 +195,8 @@ def tally_parameters(model):
             enc += param.nelement()
         elif 'decoder' or 'generator' in name:
             dec += param.nelement()
-    print('encoder: ', enc)
-    print('decoder: ', dec)
+    print('* encoder: ', enc)
+    print('* decoder: ', dec)
 
 
 def load_fields(train, valid, checkpoint):
@@ -221,7 +221,9 @@ def collect_features(train, fields):
     # TODO: account for target features.
     # Also, why does fields need to have the structure it does?
     src_features = onmt.IO.collect_features(fields)
-    aeq(len(src_features), train.n_src_feats)
+    #aeq(len(src_features), train.n_src_feats)
+    # hack
+    aeq(len(src_features), 0)
 
     return src_features
 
@@ -289,6 +291,32 @@ def main():
     src_features = collect_features(train, fields)
     for j, feat in enumerate(src_features):
         print(' * src feature %d size = %d' % (j, len(fields[feat].vocab)))
+
+    if opt.phrase_mappings:
+        # Only do source side for now, I guess
+        # We want to load the original unigram vocabulary and
+        # add on the phrase ids to the vocab afterwards, so that
+        # for all ids > N, they belong to phrases and ids < N are all unigrams
+        import pickle
+        unigram_vocab = torch.load(opt.unigram_vocab)
+        src_vocab = unigram_vocab[0][1]
+        unigram_size = len(src_vocab.itos)
+        src_vocab.unigram_size = unigram_size
+        def extend(vocab, word):
+            if word not in vocab.stoi:
+                vocab.stoi[word] = len(vocab.itos)
+                vocab.itos.append(word)
+        with open(opt.phrase_mappings, "rb") as f:
+            phrase_mappings = pickle.load(f)
+            phrase_mapping = {"_".join(words): list(words) for mapping in phrase_mappings for words, _ in mapping.items()}
+            for phrase, _ in phrase_mapping.items():
+                extend(src_vocab, phrase)
+            idx_mapping = {src_vocab.stoi[phrase]: list(map(lambda x: src_vocab.stoi[x], words)) for phrase, words in phrase_mapping.items()}
+            src_vocab.phrase_mapping = phrase_mapping
+            src_vocab.idx_mapping = idx_mapping
+            # Hack itos and stoi of src_vocab
+            fields['src'].vocab = src_vocab
+            # Since field is referenced by everything this should probably affect everything...
 
     # Build model.
     model = build_model(model_opt, opt, fields, checkpoint)

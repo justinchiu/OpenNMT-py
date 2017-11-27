@@ -348,8 +348,8 @@ class ONMTDataset(torchtext.data.Dataset):
 
         fields = [(k, fields[k]) for k in keys]
         example_values = ([ex[k] for k in keys] for ex in examples)
-        out_examples = (torchtext.data.Example.fromlist(ex_values, fields)
-                        for ex_values in example_values)
+        out_examples = [torchtext.data.Example.fromlist(ex_values, fields)
+                        for ex_values in example_values]
 
         def filter_pred(example):
             return 0 < len(example.src) <= src_seq_length \

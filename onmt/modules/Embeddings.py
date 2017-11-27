@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+from torch.nn.utils.rnn import pack_padded_sequence as pack
+
 from onmt.modules import BottleLinear, Elementwise
 from onmt.Utils import aeq
 
@@ -144,7 +146,7 @@ class Embeddings(nn.Module):
 
         return emb
 
-class PhraseEmbeddings(Embeddings):
+class PhraseEmbeddings(nn.Module):
     """
     Words embeddings dictionary for encoder/decoder.
 
@@ -166,14 +168,106 @@ class PhraseEmbeddings(Embeddings):
         feat_vocab_sizes ([int], optional): list of size of dictionary
                                     of embeddings for each feature.
     """
-    def __init__(self, word_vec_size, position_encoding, feat_merge,
-                 feat_vec_exponent, feat_vec_size, dropout,
-                 word_padding_idx, feat_padding_idx,
-                 word_vocab_size, feat_vocab_sizes=[]):
-        self.comp = comp
-        pass
+    def __init__(
+        self,
+        word_vec_size,
+        position_encoding,
+        dropout,
+        word_padding_idx,
+        word_vocab_size,
+        phrase_mapping,
+        comp_fn
+    ):
+        super(PhraseEmbeddings, self).__init__()
+
+        self.word_vec_size     = word_vec_size
+        self.position_encoding = position_encoding
+        self.dropout           = dropout
+        self.word_padding_idx  = word_padding_idx
+        self.word_vocab_size   = word_vocab_size
+        self.phrase_mapping    = phrase_mapping
+        self.comp_fn           = comp_fn
+
+        self.embedding_size = word_vec_size
+
+        phrase_vocab_size = len(phrase_mapping)
+        self.phrase_vocab_size = phrase_vocab_size
+
+        # this will make the backward disgusting, we might as well just
+        # re-assign all phrase ids to pad_idx anyway.
+        # at test time we can extend embedding.
+        self.full_lut = nn.Embedding(word_vocab_size + phrase_vocab_size, word_vec_size)
+        self.lut = nn.Embedding(word_vocab_size, word_vec_size)
+        # weight sharing
+        self.lut.weight.data = self.full_lut.weight.data[:word_vocab_size]
+        # zero phrase embeddings
+        self.full_lut.weight.data[word_vocab_size] = 0
+
+        self._buf = torch.cuda.LongTensor()
+        self.register_buffer("phrase_child_idxs", self._buf)
 
 
     def forward(self, input):
+        """
+        Take the phrase_mapping and update the respective unigram ids,
+        then simply use the lookup tables.
+        input: the input tensor with unigram and phrase ids
+        phrase_mapping: mapping from phrase_ids to unigram ids
+        """
+
+        comp_fn = self.comp_fn
+        nhid = self.word_vec_size
+        phrase_mapping = self.phrase_mapping
+
+        # T x N x F=1
         in_length, in_batch, nfeat = input.size()
-        return comp(input)
+
+        input = input.squeeze(2)
+        mask = input.ge(self.word_vocab_size)
+
+        # Set phrases to pad_idx because they won't be used anyway
+        words = input.clone()
+        words[mask] = self.word_padding_idx
+
+        # Gather phrases and get unique
+        # Introduces a sync point.
+        # I think masked indexing is done out of place as well
+        phrases = input[mask].data.cpu()
+        indices = sorted(set(phrases), key=lambda x: len(phrase_mapping[x]), reverse=True)
+        lengths = list(map(lambda x: len(phrase_mapping[x]), indices))
+
+        # Construct mapping to go from phrases back into index positions.
+        revmap = {v: k for k, v in enumerate(indices)}
+        pos = phrases.apply_(lambda x: revmap[x]).cuda()
+
+        max_len = lengths[0]
+        self._buf.resize_(max_len, len(indices)).fill_(0)
+        for i, idx in enumerate(indices):
+            self._buf[:lengths[i],i].copy_(torch.LongTensor(phrase_mapping[idx]))
+        _, (h, c) = comp_fn(pack(self.lut(Variable(self._buf)), lengths))
+        phrases = h.permute(1,0,2).contiguous().view(-1, nhid)
+
+        words = self.lut(words)
+
+        output = words \
+            .view(-1, nhid) \
+            .masked_scatter(mask.view(-1, 1), phrases[pos]) \
+            .view(in_length, in_batch, nhid)
+
+        return output
+
+    # remove all this later
+    @property
+    def word_lut(self):
+        return self.make_embedding[0][0]
+
+    @property
+    def emb_luts(self):
+        return self.make_embedding[0]
+
+    def load_pretrained_vectors(self, emb_file, fixed):
+        if emb_file:
+            pretrained = torch.load(emb_file)
+            self.word_lut.weight.data.copy_(pretrained)
+            if fixed:
+                self.word_lut.weight.requires_grad = False

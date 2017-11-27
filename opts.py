@@ -36,6 +36,12 @@ def model_opts(parser):
     parser.add_argument('-share_embeddings', action='store_true',
                         help="""Share the word embeddings between encoder
                          and decoder.""")
+    parser.add_argument('-phrase_mappings', type=str, default=None,
+                        help="""Use embeddings for phrases,
+                        given the phrase mapping path.""")
+    parser.add_argument('-unigram_vocab', type=str, default=None,
+                        help="""Use embeddings for phrases,
+                        given the phrase mapping path.""")
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',
@@ -133,6 +139,13 @@ def preprocess_opts(parser):
 def train_opts(parser):
     # Model loading/saving options
     parser.add_argument('-data', required=True,
+                        help="""Path prefix to the ".train.pt" and
+                        ".valid.pt" file path from preprocess.py""")
+
+    parser.add_argument('-srcdata', type=str, default=None,
+                        help="""Path prefix to the ".train.pt" and
+                        ".valid.pt" file path from preprocess.py""")
+    parser.add_argument('-tgtdata', type=str, default=None,
                         help="""Path prefix to the ".train.pt" and
                         ".valid.pt" file path from preprocess.py""")
 
