@@ -130,7 +130,7 @@ class Trainer(object):
 
                 # If truncated, don't backprop fully.
                 if dec_state is not None:
-                    dec_state.detach()
+                    dec_state = dec_state.detach()
 
             if report_func is not None:
                 report_stats = report_func(

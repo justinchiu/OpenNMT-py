@@ -443,9 +443,11 @@ class DecoderState(object):
         Detaches all Variables from the graph
         that created it, making it a leaf.
         """
-        for h in self._all:
+        def f(h):
             if h is not None:
-                h.detach_()
+                return h.detach()
+        return self.__new__(
+            type(self), f(self.input_feed), self.hidden_size, tuple(f(x) for x in self.hidden))
 
     def beam_update(self, idx, positions, beam_size):
         """ Update when beam advances. """
@@ -473,6 +475,7 @@ class RNNDecoderState(DecoderState):
         else:
             self.hidden = rnnstate
         self.coverage = None
+        self.hidden_size = hidden_size
 
         # Init the input feed.
         batch_size = context.size(1)
