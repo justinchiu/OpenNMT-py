@@ -196,21 +196,22 @@ class PhraseEmbeddings(nn.Module):
         # this will make the backward disgusting, we might as well just
         # re-assign all phrase ids to pad_idx anyway.
         # at test time we can extend embedding.
-        self.full_lut = nn.Embedding(word_vocab_size + phrase_vocab_size, word_vec_size)
-        self.lut = nn.Embedding(word_vocab_size, word_vec_size)
+        self.full_lut = nn.Embedding(word_vocab_size + phrase_vocab_size, word_vec_size, word_padding_idx)
+        self.lut = nn.Embedding(word_vocab_size, word_vec_size, word_padding_idx)
         # weight sharing
         self.lut.weight.data = self.full_lut.weight.data[:word_vocab_size]
         # zero phrase embeddings
         self.full_lut.weight.data[word_vocab_size] = 0
 
-        self._buf = torch.cuda.LongTensor()
-        self.register_buffer("phrase_child_idxs", self._buf)
+        self.register_buffer("_buf", torch.LongTensor())
 
 
     def forward(self, input):
         """
         Take the phrase_mapping and update the respective unigram ids,
         then simply use the lookup tables.
+
+        TODO(justinchiu): Only works for LSTM right now because of unpacking of h,c.
         input: the input tensor with unigram and phrase ids
         phrase_mapping: mapping from phrase_ids to unigram ids
         """
@@ -238,7 +239,9 @@ class PhraseEmbeddings(nn.Module):
 
         # Construct mapping to go from phrases back into index positions.
         revmap = {v: k for k, v in enumerate(indices)}
-        pos = phrases.apply_(lambda x: revmap[x]).cuda()
+        pos = phrases.apply_(lambda x: revmap[x])
+        if input.is_cuda:
+            pos = pos.cuda()
 
         max_len = lengths[0]
         self._buf.resize_(max_len, len(indices)).fill_(0)

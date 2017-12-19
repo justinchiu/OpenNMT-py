@@ -36,7 +36,10 @@ def model_opts(parser):
     parser.add_argument('-share_embeddings', action='store_true',
                         help="""Share the word embeddings between encoder
                          and decoder.""")
-    parser.add_argument('-phrase_mappings', type=str, default=None,
+    parser.add_argument('-src_phrase_mappings', type=str, default=None,
+                        help="""Use embeddings for phrases,
+                        given the phrase mapping path.""")
+    parser.add_argument('-tgt_phrase_mappings', type=str, default=None,
                         help="""Use embeddings for phrases,
                         given the phrase mapping path.""")
     parser.add_argument('-unigram_vocab', type=str, default=None,

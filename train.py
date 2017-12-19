@@ -292,7 +292,7 @@ def main():
     for j, feat in enumerate(src_features):
         print(' * src feature %d size = %d' % (j, len(fields[feat].vocab)))
 
-    if opt.phrase_mappings:
+    if opt.src_phrase_mappings:
         # Only do source side for now, I guess
         # We want to load the original unigram vocabulary and
         # add on the phrase ids to the vocab afterwards, so that
@@ -306,7 +306,7 @@ def main():
             if word not in vocab.stoi:
                 vocab.stoi[word] = len(vocab.itos)
                 vocab.itos.append(word)
-        with open(opt.phrase_mappings, "rb") as f:
+        with open(opt.src_phrase_mappings, "rb") as f:
             phrase_mappings = pickle.load(f)
             phrase_mapping = {"_".join(words): list(words) for mapping in phrase_mappings for words, _ in mapping.items()}
             for phrase, _ in phrase_mapping.items():
