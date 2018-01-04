@@ -243,19 +243,22 @@ class PhraseEmbeddings(nn.Module):
         if input.is_cuda:
             pos = pos.cuda()
 
-        max_len = lengths[0]
-        self._buf.resize_(max_len, len(indices)).fill_(0)
-        for i, idx in enumerate(indices):
-            self._buf[:lengths[i],i].copy_(torch.LongTensor(phrase_mapping[idx]))
-        _, (h, c) = comp_fn(pack(self.lut(Variable(self._buf)), lengths))
-        phrases = h.permute(1,0,2).contiguous().view(-1, nhid)
+        if lengths:
+            max_len = lengths[0]
+            self._buf.resize_(max_len, len(indices)).fill_(0)
+            for i, idx in enumerate(indices):
+                self._buf[:lengths[i],i].copy_(torch.LongTensor(phrase_mapping[idx]))
+            _, (h, c) = comp_fn(pack(self.lut(Variable(self._buf)), lengths))
+            phrases = h.permute(1,0,2).contiguous().view(-1, nhid)
 
-        words = self.lut(words)
+            words = self.lut(words)
 
-        output = words \
-            .view(-1, nhid) \
-            .masked_scatter(mask.view(-1, 1), phrases[pos]) \
-            .view(in_length, in_batch, nhid)
+            output = words \
+                .view(-1, nhid) \
+                .masked_scatter(mask.view(-1, 1), phrases[pos]) \
+                .view(in_length, in_batch, nhid)
+        else:
+            output = self.lut(words)
 
         return output
 
