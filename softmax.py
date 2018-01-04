@@ -11,6 +11,7 @@ D = 10
 nuni = 50
 nphrase = 50
 nv = nuni + nphrase
+nd = 8
 
 T = 10
 N = 4
@@ -51,7 +52,6 @@ def get_distractors(n, perm, phrases):
     return d
 
 def sample(vx, vy):
-    nd = 8
     perm = torch.randperm(nphrase) + nuni
     mask = y.ge(nuni)
     phrases = set(y[mask])
@@ -158,18 +158,19 @@ print(diff_right.max())
 # but we only want what we need from the sparse section.
 
 class PhrasePolytope(nn.Module):
-    def __init__(self, phrase_lut):
+    def __init__(self, phrase_lut, n=32):
         super(PhrasePolytope, self).__init__()
         self.phrase_lut = phrase_lut
         self.nuni = phrase_lut.lut.num_embeddings
         self.nphr = phrase_lut.phrase_vocab_size
-        self.n = 8
+        self.n = n
 
     def reset_parameters(self):
         self.dense_lut.reset_parameters()
         self.sparse_lut.reset_parameters()
 
     def reset_perm(self):
+        """Using a permutation like this is probably almost equivalent to reservoir sampling"""
         self.perm = torch.randperm(self.nphr) + self.nuni
 
     def prepare_projection(self, target, n):
@@ -198,8 +199,7 @@ class PhrasePolytope(nn.Module):
         self.target = target.new(list(map(
             lambda x: self.v2i[x] + self.nuni if x > self.nuni else x,
             target.view(-1)
-        )))
-        self.target.resize_as_(target)
+        ))).view_as(target)
         return self.target
 
     def forward(self, input):
@@ -210,7 +210,15 @@ class PhrasePolytope(nn.Module):
     def __repr__(self):
         return "HI"
 
-pp = PhrasePolytope(phrase_lut)
+pp = PhrasePolytope(phrase_lut, nd)
 pp.perm = perm_wrong
 cy = pp.collapse_target(y)
 energies = pp.forward(lut(V(x).squeeze(2)))
+assert(F.cross_entropy(energies.view(T * N, -1), V(cy).view(-1)) == sample_loss_wrong)
+assert((sample_e_wrong - energies).ne(0).sum() == 0)
+
+pp.perm = perm_right
+cy = pp.collapse_target(y)
+energies = pp.forward(phrase_lut(V(y)))
+assert(F.cross_entropy(energies.view(T * N, -1), V(cy).view(-1)) == sample_loss_right)
+assert((sample_e_right - energies).ne(0).sum() == 0)
