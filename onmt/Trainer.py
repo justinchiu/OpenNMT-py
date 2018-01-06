@@ -97,6 +97,12 @@ class Trainer(object):
         total_stats = Statistics()
         report_stats = Statistics()
 
+        if self.model.generator[0].phrase_lut:
+            self.train_loss.criterion.weight = self.train_loss.criterion.weight.new(
+                self.model.generator[0].n + self.model.generator[0].phrase_lut.word_vocab_size)
+            self.train_loss.criterion.weight.fill_(1)
+            self.train_loss.criterion.weight[self.train_loss.padding_idx] = 0
+
         for i, batch in enumerate(self.train_iter):
             target_size = batch.tgt.size(0)
             # Truncated BPTT
@@ -107,6 +113,10 @@ class Trainer(object):
 
             src = onmt.IO.make_features(batch, 'src')
             tgt_outer = onmt.IO.make_features(batch, 'tgt')
+            lolok = tgt_outer.clone()
+            if self.model.generator[0].phrase_lut:
+                self.model.generator[0].reset_perm()
+                tgt_outer = self.model.generator[0].collapse_target(tgt_outer)
             report_stats.n_src_words += src_lengths.sum()
 
             for j in range(0, target_size-1, trunc_size):

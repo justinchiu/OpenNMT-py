@@ -11,7 +11,7 @@ from onmt.Models import NMTModel, MeanEncoder, RNNEncoder, \
                         StdRNNDecoder, InputFeedRNNDecoder
 from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
-                         CNNEncoder, CNNDecoder
+                         CNNEncoder, CNNDecoder, PhrasePolytope
 from onmt.modules.Embeddings import PhraseEmbeddings
 
 
@@ -191,12 +191,17 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     model = NMTModel(encoder, decoder)
 
     # Make Generator.
-    if not model_opt.copy_attn:
+    if not model_opt.copy_attn and not model_opt.tgt_phrase_mappings:
         generator = nn.Sequential(
             nn.Linear(model_opt.rnn_size, len(fields["tgt"].vocab)),
             nn.LogSoftmax())
         if model_opt.share_decoder_embeddings:
             generator[0].weight = decoder.embeddings.word_lut.weight
+    elif model_opt.tgt_phrase_mappings:
+        generator = nn.Sequential(
+            PhrasePolytope(tgt_embeddings),
+            nn.LogSoftmax()
+        )
     else:
         generator = CopyGenerator(model_opt, fields["src"].vocab,
                                   fields["tgt"].vocab)

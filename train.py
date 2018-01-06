@@ -324,7 +324,7 @@ def main():
         # for all ids > N, they belong to phrases and ids < N are all unigrams
         import pickle
         unigram_vocab = torch.load(opt.unigram_vocab)
-        tgt_vocab = unigram_vocab[0][1]
+        tgt_vocab = unigram_vocab[1][1]
         unigram_size = len(tgt_vocab.itos)
         tgt_vocab.unigram_size = unigram_size
         def extend(vocab, word):
@@ -342,8 +342,7 @@ def main():
             # Hack itos and stoi of tgt_vocab
             fields['tgt'].vocab = tgt_vocab
             # Since field is referenced by everything this should probably affect everything...
-        import pdb; pdb.set_trace()
-
+             
     # Build model.
     model = build_model(model_opt, opt, fields, checkpoint)
     tally_parameters(model)

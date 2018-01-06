@@ -201,7 +201,7 @@ class PhraseEmbeddings(nn.Module):
         # weight sharing
         self.lut.weight.data = self.full_lut.weight.data[:word_vocab_size]
         # zero phrase embeddings
-        self.full_lut.weight.data[word_vocab_size] = 0
+        self.full_lut.weight.data[word_vocab_size:] = 0
 
         self.register_buffer("_buf", torch.LongTensor())
 
@@ -216,7 +216,6 @@ class PhraseEmbeddings(nn.Module):
         phrase_mapping: mapping from phrase_ids to unigram ids
         """
 
-        comp_fn = self.comp_fn
         nhid = self.word_vec_size
         phrase_mapping = self.phrase_mapping
 
@@ -226,29 +225,28 @@ class PhraseEmbeddings(nn.Module):
         input = input.squeeze(2)
         mask = input.ge(self.word_vocab_size)
 
-        # Set phrases to pad_idx because they won't be used anyway
-        words = input.clone()
-        words[mask] = self.word_padding_idx
+        if self.training and mask.any():
+            # Set phrases to pad_idx because they won't be used anyway
+            words = input.clone()
+            words[mask] = self.word_padding_idx
+            # Gather phrases and get unique
+            # Introduces a sync point.
+            # I think masked indexing is done out of place as well
+            phrases = input[mask].data.cpu()
+            indices = sorted(set(phrases), key=lambda x: len(phrase_mapping[x]), reverse=True)
+            lengths = list(map(lambda x: len(phrase_mapping[x]), indices))
 
-        # Gather phrases and get unique
-        # Introduces a sync point.
-        # I think masked indexing is done out of place as well
-        phrases = input[mask].data.cpu()
-        indices = sorted(set(phrases), key=lambda x: len(phrase_mapping[x]), reverse=True)
-        lengths = list(map(lambda x: len(phrase_mapping[x]), indices))
+            # Construct mapping to go from phrases back into index positions.
+            revmap = {v: k for k, v in enumerate(indices)}
+            pos = phrases.apply_(lambda x: revmap[x])
+            if input.is_cuda:
+                pos = pos.cuda()
 
-        # Construct mapping to go from phrases back into index positions.
-        revmap = {v: k for k, v in enumerate(indices)}
-        pos = phrases.apply_(lambda x: revmap[x])
-        if input.is_cuda:
-            pos = pos.cuda()
-
-        if lengths:
             max_len = lengths[0]
             self._buf.resize_(max_len, len(indices)).fill_(0)
             for i, idx in enumerate(indices):
                 self._buf[:lengths[i],i].copy_(torch.LongTensor(phrase_mapping[idx]))
-            _, (h, c) = comp_fn(pack(self.lut(Variable(self._buf)), lengths))
+            _, (h, c) = self.comp_fn(pack(self.lut(Variable(self._buf)), lengths))
             phrases = h.permute(1,0,2).contiguous().view(-1, nhid)
 
             words = self.lut(words)
@@ -257,10 +255,28 @@ class PhraseEmbeddings(nn.Module):
                 .view(-1, nhid) \
                 .masked_scatter(mask.view(-1, 1), phrases[pos]) \
                 .view(in_length, in_batch, nhid)
+        elif self.training:
+            output = self.lut(input)
         else:
-            output = self.lut(words)
+            output = self.full_lut(input)
 
         return output
+
+    def train(self, mode=True):
+        # we want to fill in the lut with all the phrase values
+        if not mode:
+            N = 256
+            for i in range(self.word_vocab_size, self.full_lut.num_embeddings, N):
+                j = min(i+N, self.full_lut.num_embeddings)
+                idxs = torch.arange(i, j).type("torch.cuda.LongTensor")
+                self.full_lut.weight[i:j].copy_(
+                    self(Variable(idxs.view(-1, 1, 1))).squeeze(1)
+                )
+
+        self.training = mode
+        for module in self.children():
+            module.train(mode)
+        return self
 
     # remove all this later
     @property

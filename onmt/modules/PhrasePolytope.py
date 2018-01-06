@@ -34,7 +34,7 @@ class PhrasePolytope(nn.Module):
         distractors = self.get_distractors(n, self.perm, phrases)
         self.vertices = sorted(list(phrases | distractors))
         self.v2i = {v: i for i, v in enumerate(self.vertices)}
-        self.vertT = V(torch.LongTensor(self.vertices).view(-1, 1, 1))
+        self.vertT = target.new(self.vertices).view(-1, 1, 1)
 
     def get_distractors(self, n, perm, phrases):
         """ Get a set of distractors """
@@ -52,12 +52,12 @@ class PhrasePolytope(nn.Module):
         self.prepare_projection(target, self.n)
         self.target = target.new(list(map(
             lambda x: self.v2i[x] + self.nuni if x > self.nuni else x,
-            target.view(-1)
+            target.data.view(-1).tolist()
         ))).view_as(target)
         return self.target
 
     def forward(self, input):
-        proj = torch.cat((self.phrase_lut.lut.weight, self.phrase_lut(self.vertT).squeeze(1)), 0)
+        proj = torch.cat((self.phrase_lut.lut.weight, self.phrase_lut(self.vertT).squeeze(1)), 0) if self.training else self.phrase_lut.full_lut.weight
         bias = None # for now
         return F.linear(input, proj, bias)
 
