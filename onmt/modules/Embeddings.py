@@ -265,7 +265,7 @@ class PhraseEmbeddings(nn.Module):
     def train(self, mode=True):
         # we want to fill in the lut with all the phrase values
         if not mode:
-            N = 256
+            N = 128
             for i in range(self.word_vocab_size, self.full_lut.num_embeddings, N):
                 j = min(i+N, self.full_lut.num_embeddings)
                 idxs = torch.arange(i, j).type("torch.cuda.LongTensor")
