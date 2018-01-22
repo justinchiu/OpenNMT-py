@@ -198,10 +198,7 @@ class PhraseEmbeddings(nn.Module):
         # at test time we can extend embedding.
         self.full_lut = nn.Embedding(word_vocab_size + phrase_vocab_size, word_vec_size, word_padding_idx)
         self.lut = nn.Embedding(word_vocab_size, word_vec_size, word_padding_idx)
-        # weight sharing
-        self.lut.weight.data = self.full_lut.weight.data[:word_vocab_size]
-        # zero phrase embeddings
-        self.full_lut.weight.data[word_vocab_size:] = 0
+        self.full_lut.weight.requires_grad = False
 
         self.register_buffer("_buf", torch.LongTensor())
 
@@ -265,13 +262,15 @@ class PhraseEmbeddings(nn.Module):
     def train(self, mode=True):
         # we want to fill in the lut with all the phrase values
         if not mode:
-            N = 128
-            for i in range(self.word_vocab_size, self.full_lut.num_embeddings, N):
-                j = min(i+N, self.full_lut.num_embeddings)
-                idxs = torch.arange(i, j).type("torch.cuda.LongTensor")
-                self.full_lut.weight[i:j].copy_(
-                    self(Variable(idxs.view(-1, 1, 1))).squeeze(1)
-                )
+            with torch.no_grad():
+                self.full_lut.weight.data[:self.word_vocab_size].copy_(self.lut.weight.data)
+                N = 128
+                for i in range(self.word_vocab_size, self.full_lut.num_embeddings, N):
+                    j = min(i+N, self.full_lut.num_embeddings)
+                    idxs = torch.arange(i, j).type("torch.cuda.LongTensor")
+                    self.full_lut.weight[i:j].data.copy_(
+                        self(Variable(idxs.view(-1, 1, 1))).data.squeeze(1)
+                    )
 
         self.training = mode
         for module in self.children():

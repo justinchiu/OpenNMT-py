@@ -198,8 +198,10 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
         if model_opt.share_decoder_embeddings:
             generator[0].weight = decoder.embeddings.word_lut.weight
     elif model_opt.tgt_phrase_mappings:
+        dec_embeddings = make_embeddings(
+            model_opt, tgt_dict, feature_dicts, for_encoder=False)
         generator = nn.Sequential(
-            PhrasePolytope(tgt_embeddings),
+            PhrasePolytope(dec_embeddings, model_opt.tgt_distractors),
             nn.LogSoftmax()
         )
     else:
@@ -209,6 +211,12 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     # Load the model states from checkpoint or initialize them.
     if checkpoint is not None:
         print('Loading model parameters.')
+        if "encoder.embeddings._buf" in checkpoint["model"]:
+            checkpoint["model"]["encoder.embeddings._buf"].resize_(0)
+        if "decoder.embeddings._buf" in checkpoint["model"]:
+            checkpoint["model"]["decoder.embeddings._buf"].resize_(0)
+        if "0.phrase_lut._buf" in checkpoint["generator"]:
+            checkpoint["generator"]["0.phrase_lut._buf"].resize_(0)
         model.load_state_dict(checkpoint['model'])
         generator.load_state_dict(checkpoint['generator'])
     else:

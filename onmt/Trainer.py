@@ -18,6 +18,7 @@ import torch.nn as nn
 import onmt
 import onmt.modules
 
+import numpy as np
 
 class Statistics(object):
     """
@@ -97,12 +98,6 @@ class Trainer(object):
         total_stats = Statistics()
         report_stats = Statistics()
 
-        if self.model.generator[0].phrase_lut:
-            self.train_loss.criterion.weight = self.train_loss.criterion.weight.new(
-                self.model.generator[0].n + self.model.generator[0].phrase_lut.word_vocab_size)
-            self.train_loss.criterion.weight.fill_(1)
-            self.train_loss.criterion.weight[self.train_loss.padding_idx] = 0
-
         for i, batch in enumerate(self.train_iter):
             target_size = batch.tgt.size(0)
             # Truncated BPTT
@@ -113,10 +108,15 @@ class Trainer(object):
 
             src = onmt.IO.make_features(batch, 'src')
             tgt_outer = onmt.IO.make_features(batch, 'tgt')
-            lolok = tgt_outer.clone()
-            if self.model.generator[0].phrase_lut:
+            if hasattr(self.model.generator[0], "phrase_lut"):
                 self.model.generator[0].reset_perm()
-                tgt_outer = self.model.generator[0].collapse_target(tgt_outer)
+                ctgt_outer = self.model.generator[0].collapse_target(tgt_outer)
+                self.train_loss.criterion.weight = self.train_loss.criterion.weight.new(
+                    len(self.model.generator[0].vertices) + self.model.generator[0].phrase_lut.word_vocab_size)
+                self.train_loss.criterion.weight.fill_(1)
+                self.train_loss.criterion.weight[self.train_loss.padding_idx] = 0
+                batch.tgt.copy_(ctgt_outer.squeeze(2)) # ? lol...
+
             report_stats.n_src_words += src_lengths.sum()
 
             for j in range(0, target_size-1, trunc_size):
@@ -155,21 +155,21 @@ class Trainer(object):
         self.model.eval()
 
         stats = Statistics()
+        with torch.no_grad():
+            for batch in self.valid_iter:
+                _, src_lengths = batch.src
+                src = onmt.IO.make_features(batch, 'src')
+                tgt = onmt.IO.make_features(batch, 'tgt')
 
-        for batch in self.valid_iter:
-            _, src_lengths = batch.src
-            src = onmt.IO.make_features(batch, 'src')
-            tgt = onmt.IO.make_features(batch, 'tgt')
+                # F-prop through the model.
+                outputs, attns, _ = self.model(src, tgt, src_lengths)
 
-            # F-prop through the model.
-            outputs, attns, _ = self.model(src, tgt, src_lengths)
+                # Compute loss.
+                batch_stats = self.valid_loss.monolithic_compute_loss(
+                        batch, outputs, attns)
 
-            # Compute loss.
-            batch_stats = self.valid_loss.monolithic_compute_loss(
-                    batch, outputs, attns)
-
-            # Update statistics.
-            stats.update(batch_stats)
+                # Update statistics.
+                stats.update(batch_stats)
 
         # Set model back to training mode.
         self.model.train()

@@ -11,6 +11,8 @@ from torch.autograd import Variable as V
 # We have a dense weight as well as a sparse weight that's expensive to evaluate, so we need the concatenation of both,
 # but we only want what we need from the sparse section.
 
+# TODO(justc): need to divide by q(x)
+
 class PhrasePolytope(nn.Module):
     def __init__(self, phrase_lut, n=32):
         super(PhrasePolytope, self).__init__()
@@ -19,10 +21,6 @@ class PhrasePolytope(nn.Module):
         self.nphr = phrase_lut.phrase_vocab_size
         self.n = n
 
-    def reset_parameters(self):
-        self.dense_lut.reset_parameters()
-        self.sparse_lut.reset_parameters()
-
     def reset_perm(self):
         """Using a permutation like this is probably almost equivalent to reservoir sampling"""
         self.perm = torch.randperm(self.nphr) + self.nuni
@@ -30,7 +28,7 @@ class PhrasePolytope(nn.Module):
     def prepare_projection(self, target, n):
         """ Sets the phrase vertices of the softmax projection polytope """
         mask = target.ge(self.nuni)
-        phrases = set(target[mask])
+        phrases = set(target[mask].tolist())
         distractors = self.get_distractors(n, self.perm, phrases)
         self.vertices = sorted(list(phrases | distractors))
         self.v2i = {v: i for i, v in enumerate(self.vertices)}
@@ -57,7 +55,11 @@ class PhrasePolytope(nn.Module):
         return self.target
 
     def forward(self, input):
-        proj = torch.cat((self.phrase_lut.lut.weight, self.phrase_lut(self.vertT).squeeze(1)), 0) if self.training else self.phrase_lut.full_lut.weight
+        if self.training:
+            self.plut_output = self.phrase_lut(self.vertT).squeeze(1)
+            proj = torch.cat((self.phrase_lut.lut.weight, self.plut_output), 0)
+        else:
+            proj = self.phrase_lut.full_lut.weight
         bias = None # for now
         return F.linear(input, proj, bias)
 

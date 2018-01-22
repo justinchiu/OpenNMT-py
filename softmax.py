@@ -160,13 +160,18 @@ print(diff_right.max())
 
 pp = PhrasePolytope(phrase_lut, nd)
 pp.perm = perm_wrong
-cy = pp.collapse_target(y)
+cy = pp.collapse_target(V(y))
 energies = pp.forward(lut(V(x).squeeze(2)))
-assert(F.cross_entropy(energies.view(T * N, -1), V(cy).view(-1)) == sample_loss_wrong)
+loss_wrong = F.cross_entropy(energies.view(T * N, -1), cy.view(-1))
+loss_wrong.backward()
+assert(loss_wrong == sample_loss_wrong)
 assert((sample_e_wrong - energies).ne(0).sum() == 0)
 
 pp.perm = perm_right
-cy = pp.collapse_target(y)
+cy = pp.collapse_target(V(y))
 energies = pp.forward(phrase_lut(V(y)))
-assert(F.cross_entropy(energies.view(T * N, -1), V(cy).view(-1)) == sample_loss_right)
+loss_right = F.cross_entropy(energies.view(T * N, -1), cy.view(-1))
+loss_right.backward()
+assert(loss_right == sample_loss_right)
 assert((sample_e_right - energies).ne(0).sum() == 0)
+

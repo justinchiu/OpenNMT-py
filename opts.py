@@ -45,6 +45,9 @@ def model_opts(parser):
     parser.add_argument('-unigram_vocab', type=str, default=None,
                         help="""Use embeddings for phrases,
                         given the phrase mapping path.""")
+    parser.add_argument('-tgt_distractors', type=int, default=32,
+                        help="""Use embeddings for phrases,
+                        given the phrase mapping path.""")
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',
