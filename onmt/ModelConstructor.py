@@ -152,7 +152,7 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     Args:
         model_opt: the option loaded from checkpoint.
         fields: `Field` objects for the model.
-        gpu(bool): whether to use gpu.
+        gpu(int): whether to use gpu.
         checkpoint: the model gnerated by train phase, or a resumed snapshot
                     model from a stopped training.
     Returns:
@@ -191,13 +191,13 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     model = NMTModel(encoder, decoder)
 
     # Make Generator.
-    if not model_opt.copy_attn and not model_opt.tgt_phrase_mappings:
+    if not model_opt.copy_attn and not (hasattr(model_opt, "tgt_phrase_mappings") and model_opt.tgt_phrase_mappings):
         generator = nn.Sequential(
             nn.Linear(model_opt.rnn_size, len(fields["tgt"].vocab)),
             nn.LogSoftmax())
         if model_opt.share_decoder_embeddings:
             generator[0].weight = decoder.embeddings.word_lut.weight
-    elif model_opt.tgt_phrase_mappings:
+    elif hasattr(model_opt, "tgt_phrase_mappings") and model_opt.tgt_phrase_mappings:
         dec_embeddings = make_embeddings(
             model_opt, tgt_dict, feature_dicts, for_encoder=False)
         generator = nn.Sequential(
@@ -235,8 +235,8 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     model.generator = generator
 
     # Make the whole model leverage GPU if indicated to do so.
-    if gpu:
-        model.cuda()
+    if gpu > -1:
+        model.cuda(gpu)
     else:
         model.cpu()
 

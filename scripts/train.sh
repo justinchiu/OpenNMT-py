@@ -230,6 +230,7 @@ generate_phrase_machine_word_nodistill() {
         -beam_size 5
 }
 
+# note that the source distribution is ALWAYS the same, so this is fine
 train_phrase_cmachine_word() {
     name=phrase.cmachine.word
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
@@ -363,6 +364,22 @@ train_phrase_cnatural_scnatural_nodistill() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
+dbg_train_phrase_cnatural_scnatural_nodistill() {
+    name=phrase.cnatural.scnatural.nodistill
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_NATURAL_NATURAL_NODISTILL \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -tgt_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.natural.natural.tgt.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -tgt_distractors 2048 \
+        -save_model /tmp/trash \
+        -gpuid 3 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 
+}
+
 generate_phrase_cnatural_scnatural_nodistill() {
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
         -model /n/rush_lab/jc/onmt/models/phrase.cnatural.scnatural.nodistill/phrase.cnatural.scnatural.nodistill.lr1.clip5_acc_40.81_ppl_49.96_e14.pt \
@@ -394,7 +411,6 @@ train_phrase_word_natural_nodistill() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
-
 generate_phrase_word_natural_nodistill() {
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
         -model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill/phrase.word.natural.nodistill.lr1.clip5_acc_42.02_ppl_47.73_e13.pt \
@@ -403,3 +419,4 @@ generate_phrase_word_natural_nodistill() {
         -output /n/rush_lab/jc/onmt/gen/phrase.word.natural.nodistill.test.en \
         -beam_size 5
 }
+

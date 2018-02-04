@@ -13,7 +13,7 @@ import onmt
 import onmt.Models
 import onmt.ModelConstructor
 import onmt.modules
-from onmt.Utils import aeq, use_gpu
+from onmt.Utils import aeq, use_gpu, add_phrases
 import opts
 
 parser = argparse.ArgumentParser(
@@ -293,55 +293,11 @@ def main():
         print(' * src feature %d size = %d' % (j, len(fields[feat].vocab)))
 
     if opt.src_phrase_mappings:
-        # Only do source side for now, I guess
-        # We want to load the original unigram vocabulary and
-        # add on the phrase ids to the vocab afterwards, so that
-        # for all ids > N, they belong to phrases and ids < N are all unigrams
-        import pickle
-        unigram_vocab = torch.load(opt.unigram_vocab)
-        src_vocab = unigram_vocab[0][1]
-        unigram_size = len(src_vocab.itos)
-        src_vocab.unigram_size = unigram_size
-        def extend(vocab, word):
-            if word not in vocab.stoi:
-                vocab.stoi[word] = len(vocab.itos)
-                vocab.itos.append(word)
-        with open(opt.src_phrase_mappings, "rb") as f:
-            phrase_mappings = pickle.load(f)
-            phrase_mapping = {"_".join(words): list(words) for mapping in phrase_mappings for words, _ in mapping.items()}
-            for phrase, _ in phrase_mapping.items():
-                extend(src_vocab, phrase)
-            idx_mapping = {src_vocab.stoi[phrase]: list(map(lambda x: src_vocab.stoi[x], words)) for phrase, words in phrase_mapping.items()}
-            src_vocab.phrase_mapping = phrase_mapping
-            src_vocab.idx_mapping = idx_mapping
-            # Hack itos and stoi of src_vocab
-            fields['src'].vocab = src_vocab
-            # Since field is referenced by everything this should probably affect everything...
+        src_vocab = torch.load(opt.unigram_vocab)[0][1]
+        fields['src'].vocab = add_phrases(src_vocab, opt.src_phrase_mappings)
     if opt.tgt_phrase_mappings:
-        # Only do source side for now, I guess
-        # We want to load the original unigram vocabulary and
-        # add on the phrase ids to the vocab afterwards, so that
-        # for all ids > N, they belong to phrases and ids < N are all unigrams
-        import pickle
-        unigram_vocab = torch.load(opt.unigram_vocab)
-        tgt_vocab = unigram_vocab[1][1]
-        unigram_size = len(tgt_vocab.itos)
-        tgt_vocab.unigram_size = unigram_size
-        def extend(vocab, word):
-            if word not in vocab.stoi:
-                vocab.stoi[word] = len(vocab.itos)
-                vocab.itos.append(word)
-        with open(opt.tgt_phrase_mappings, "rb") as f:
-            phrase_mappings = pickle.load(f)
-            phrase_mapping = {"_".join(words): list(words) for mapping in phrase_mappings for words, _ in mapping.items()}
-            for phrase, _ in phrase_mapping.items():
-                extend(tgt_vocab, phrase)
-            idx_mapping = {tgt_vocab.stoi[phrase]: list(map(lambda x: tgt_vocab.stoi[x], words)) for phrase, words in phrase_mapping.items()}
-            tgt_vocab.phrase_mapping = phrase_mapping
-            tgt_vocab.idx_mapping = idx_mapping
-            # Hack itos and stoi of tgt_vocab
-            fields['tgt'].vocab = tgt_vocab
-            # Since field is referenced by everything this should probably affect everything...
+        tgt_vocab = torch.load(opt.unigram_vocab)[1][1]
+        fields['tgt'].vocab = add_phrases(tgt_vocab, opt.tgt_phrase_mappings)
              
     # Build model.
     model = build_model(model_opt, opt, fields, checkpoint)
