@@ -107,7 +107,7 @@ else:
 
             lsm = model.generator(output.squeeze(1))
 
-            bloss = F.nll_loss(lsm, cy.view(-1)[1:])
+            bloss = F.nll_loss(lsm, cy.view(-1)[1:], reduce=False)
 
             nlls[i] = bloss.mean().data[0]
             attns.append(attn)

@@ -399,12 +399,13 @@ generate_phrase_word_scnatural_nodistill() {
 }
 
 train_phrase_word_natural_nodistill() {
-    name=phrase.word.natural.nodistill
+    #name=phrase.word.natural.nodistill
+    name=phrase.word.natural.nodistill2
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -gpuid 0 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
