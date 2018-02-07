@@ -107,7 +107,7 @@ class RNNDecoderBase(nn.Module):
     """
     def __init__(self, rnn_type, bidirectional_encoder, num_layers,
                  hidden_size, attn_type, coverage_attn, context_gate,
-                 copy_attn, dropout, embeddings):
+                 copy_attn, dropout, embeddings, scale_phrases=False):
         super(RNNDecoderBase, self).__init__()
 
         # Basic attributes.
@@ -117,6 +117,7 @@ class RNNDecoderBase(nn.Module):
         self.hidden_size = hidden_size
         self.embeddings = embeddings
         self.dropout = nn.Dropout(dropout)
+        self.scale_phrases = scale_phrases
 
         # Build the RNN.
         self.rnn = self._build_rnn(rnn_type, self._input_size, hidden_size,
@@ -145,7 +146,7 @@ class RNNDecoderBase(nn.Module):
             )
             self._copy = True
 
-    def forward(self, input, context, state, context_lengths=None):
+    def forward(self, input, context, state, context_lengths=None, weights=None):
         """
         Forward through the decoder.
         Args:
@@ -173,7 +174,7 @@ class RNNDecoderBase(nn.Module):
 
         # Run the forward pass of the RNN.
         hidden, outputs, attns, coverage = self._run_forward_pass(
-            input, context, state, context_lengths=context_lengths)
+            input, context, state, context_lengths=context_lengths, weights=weights)
 
         # Update the state with the result.
         final_output = outputs[-1]
@@ -212,7 +213,7 @@ class StdRNNDecoder(RNNDecoderBase):
     Stardard RNN decoder, with Attention.
     Currently no 'coverage_attn' and 'copy_attn' support.
     """
-    def _run_forward_pass(self, input, context, state, context_lengths=None):
+    def _run_forward_pass(self, input, context, state, context_lengths=None, weights=None):
         """
         Private helper for running the specific RNN forward pass.
         Must be overriden by all subclasses.
@@ -259,7 +260,8 @@ class StdRNNDecoder(RNNDecoderBase):
         attn_outputs, attn_scores = self.attn(
             rnn_output.transpose(0, 1).contiguous(),  # (output_len, batch, d)
             context.transpose(0, 1),                  # (contxt_len, batch, d)
-            context_lengths=context_lengths
+            context_lengths=context_lengths,
+            weights=weights
         )
         attns["std"] = attn_scores
 
@@ -307,7 +309,7 @@ class InputFeedRNNDecoder(RNNDecoderBase):
     """
     Stardard RNN decoder, with Input Feed and Attention.
     """
-    def _run_forward_pass(self, input, context, state, context_lengths=None):
+    def _run_forward_pass(self, input, context, state, context_lengths=None, weights=None):
         """
         See StdRNNDecoder._run_forward_pass() for description
         of arguments and return values.
@@ -344,7 +346,8 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             attn_output, attn = self.attn(
                 rnn_output,
                 context.transpose(0, 1),
-                context_lengths=context_lengths)
+                context_lengths=context_lengths,
+                weights=weights)
             if self.context_gate is not None:
                 output = self.context_gate(
                     emb_t, rnn_output, attn_output
@@ -405,7 +408,7 @@ class NMTModel(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, src, tgt, lengths, dec_state=None):
+    def forward(self, src, tgt, lengths, dec_state=None, attn_weights=None):
         """
         Args:
             src(FloatTensor): a sequence of source tensors with
@@ -425,7 +428,8 @@ class NMTModel(nn.Module):
         enc_state = self.decoder.init_decoder_state(src, context, enc_hidden)
         out, dec_state, attns = self.decoder(tgt, context,
                                              enc_state if dec_state is None
-                                             else dec_state)
+                                             else dec_state,
+                                             weights=attn_weights)
         if self.multigpu:
             # Not yet supported on multi-gpu
             dec_state = None

@@ -26,7 +26,7 @@ class Translator(object):
         self.copy_attn = model_opt.copy_attn
 
         self.model = onmt.ModelConstructor.make_base_model(
-                            model_opt, self.fields, use_gpu(opt), checkpoint)
+                            model_opt, self.fields, opt.gpu, checkpoint)
         self.model.eval()
         self.model.generator.eval()
 

@@ -14,6 +14,7 @@ import sys
 import math
 import torch
 import torch.nn as nn
+from torch.autograd import Variable as V
 
 import onmt
 import onmt.modules
@@ -98,6 +99,12 @@ class Trainer(object):
         total_stats = Statistics()
         report_stats = Statistics()
 
+        attn_weights_cpu = None
+        attn_weights_gpu = None
+        if self.model.decoder.scale_phrases:
+            attn_weights_cpu = torch.FloatTensor()
+            attn_weights_gpu = torch.cuda.FloatTensor()
+
         for i, batch in enumerate(self.train_iter):
             target_size = batch.tgt.size(0)
             # Truncated BPTT
@@ -106,6 +113,11 @@ class Trainer(object):
             dec_state = None
             _, src_lengths = batch.src
 
+            if self.model.decoder.scale_phrases:
+                attn_weights = torch.FloatTensor([[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()])
+                if batch.tgt.is_cuda:
+                    attn_weights = attn_weights.cuda(batch.tgt.get_device())
+                attn_weights = V(attn_weights)
             src = onmt.IO.make_features(batch, 'src')
             tgt_outer = onmt.IO.make_features(batch, 'tgt')
             if hasattr(self.model.generator[0], "phrase_lut"):
@@ -126,7 +138,7 @@ class Trainer(object):
                 # 2. F-prop all but generator.
                 self.model.zero_grad()
                 outputs, attns, dec_state = \
-                    self.model(src, tgt, src_lengths, dec_state)
+                    self.model(src, tgt, src_lengths, dec_state, attn_weights=attn_weights)
 
                 # 3. Compute loss in shards for memory efficiency.
                 batch_stats = self.train_loss.sharded_compute_loss(
@@ -155,6 +167,8 @@ class Trainer(object):
         self.model.eval()
 
         stats = Statistics()
+
+        attn_weights = None
         with torch.no_grad():
             for batch in self.valid_iter:
                 _, src_lengths = batch.src
@@ -162,7 +176,7 @@ class Trainer(object):
                 tgt = onmt.IO.make_features(batch, 'tgt')
 
                 # F-prop through the model.
-                outputs, attns, _ = self.model(src, tgt, src_lengths)
+                outputs, attns, _ = self.model(src, tgt, src_lengths, attn_weights=attn_weights)
 
                 # Compute loss.
                 batch_stats = self.valid_loss.monolithic_compute_loss(

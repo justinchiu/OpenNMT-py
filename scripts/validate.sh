@@ -9,6 +9,8 @@ PHRASEDATA_NATURAL_NATURAL_NODISTILL=${ROOT}/data-onmt/iwslt14.tokenized.phrase.
 PHRASEDATA_NATURAL_WORD_NODISTILL=${ROOT}/data-onmt/iwslt14.tokenized.phrase.de-en.3-3.machine.word.nodistill
 PHRASEDATA_WORD_NATURAL_NODISTILL=${ROOT}/data-onmt/iwslt14.tokenized.phrase.de-en.3-3.word.natural.nodistill
 
+PHRASEDATA_NATURAL_WORD_NODISTILL_REPEAT=${ROOT}/data-onmt/iwslt14.tokenized.phrase.de-en.3-3.machine.word.nodistill.repeat
+
 MODEL=/n/rush_lab/jc/onmt/models
 SAVE=/n/rush_lab/jc/onmt/validation
 
@@ -43,6 +45,19 @@ validate_phrase_cnatural_word_nodistill () {
     python /n/home13/jchiu/projects/OpenNMT-py/validate.py \
         --data $PHRASEDATA_NATURAL_WORD_NODISTILL \
         --checkpoint_path /n/rush_lab/jc/onmt/models/phrase.cmachine.word.nodistill/phrase.cmachine.word.nodistill.lr1.clip5_acc_61.80_ppl_8.08_e18.pt \
+        --src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        --modelname $name \
+        --savepath $SAVE/$name \
+        --devid 0
+}
+
+validate_phrase_cnatural_word_nodistill_repeat () {
+    name=phrase.cphrase.word.nodistill.repeat
+    mkdir -p $SAVE/$name
+    python /n/home13/jchiu/projects/OpenNMT-py/validate.py \
+        --data $PHRASEDATA_NATURAL_WORD_NODISTILL_REPEAT \
+        --checkpoint_path /n/rush_lab/jc/onmt/models/$name/phrase.cphrase.word.nodistill.repeat.lr1.clip5_acc_62.25_ppl_7.94_e25.pt \
         --src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         --modelname $name \

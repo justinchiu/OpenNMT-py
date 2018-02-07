@@ -26,10 +26,13 @@ worst_nlls, worst_idxs = modelnlls.sort(descending=True)
 
 diffs, diff_idxs = (baselinenlls - modelnlls).abs().sort(descending=True)
 
-vis.heatmap(
-    modelattns[diff_idxs[1]].data.squeeze(1).cpu(),
-    opts=dict(
-        columnnames=list(phrasevalid[diff_idxs[1]].src),
-        rownames=list(phrasevalid[diff_idxs[1]].tgt) + ["<eos>"]
+def attn_heatmap(idx):
+    vis.heatmap(
+        modelattns[idx].data.squeeze(1).cpu(),
+        opts=dict(
+            columnnames=list(phrasevalid[idx].src),
+            rownames=list(phrasevalid[idx].tgt) + ["<eos>"]
+        )
     )
-)
+
+attn_heatmap(diff_idxs[1])

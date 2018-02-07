@@ -101,12 +101,13 @@ class GlobalAttention(nn.Module):
 
             return self.v(wquh.view(-1, dim)).view(tgt_batch, tgt_len, src_len)
 
-    def forward(self, input, context, context_lengths=None, coverage=None):
+    def forward(self, input, context, context_lengths=None, coverage=None, weights=None):
         """
         input (FloatTensor): batch x tgt_len x dim: decoder's rnn's output.
         context (FloatTensor): batch x src_len x dim: src hidden states
         context_lengths (LongTensor): the source context lengths.
         coverage (FloatTensor): None (not supported yet)
+        weights (FloatTensor): Multiply scores by weights before softmax
         """
 
         # one step input
@@ -133,6 +134,9 @@ class GlobalAttention(nn.Module):
 
         # compute attention scores, as in Luong et al.
         align = self.score(input, context)
+
+        if weights is not None:
+            align = align * weights.view(batch, 1, sourceL)
 
         if context_lengths is not None:
             mask = sequence_mask(context_lengths)

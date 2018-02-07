@@ -176,7 +176,8 @@ class PhraseEmbeddings(nn.Module):
         word_padding_idx,
         word_vocab_size,
         phrase_mapping,
-        comp_fn
+        comp_fn,
+        add_word_vectors=False
     ):
         super(PhraseEmbeddings, self).__init__()
 
@@ -187,6 +188,8 @@ class PhraseEmbeddings(nn.Module):
         self.word_vocab_size   = word_vocab_size
         self.phrase_mapping    = phrase_mapping
         self.comp_fn           = comp_fn
+
+        self.add_word_vectors = add_word_vectors
 
         self.embedding_size = word_vec_size
 
@@ -252,6 +255,13 @@ class PhraseEmbeddings(nn.Module):
                 .view(-1, nhid) \
                 .masked_scatter(mask.view(-1, 1), phrases[pos]) \
                 .view(in_length, in_batch, nhid)
+
+            if self.add_word_vectors:
+                # mask contains the
+                #import pdb; pdb.set_trace()
+                # TODO(justinchiu): unimplemented! add word vectors of
+                # constituents to repeated phrase output!
+                pass
         elif self.training:
             output = self.lut(input)
         else:

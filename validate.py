@@ -7,6 +7,8 @@ from onmt.Utils import add_phrases
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch.autograd import Variable as V
+
 from typing import NamedTuple
 
 from tensorboardX import SummaryWriter
@@ -73,6 +75,12 @@ nllpath = savepath + ".nlls"
 attnpath = savepath + ".attns"
 wordpath = savepath + ".wordnlls"
 
+checkpoint = torch.load(
+    args.checkpoint_path,
+    map_location=lambda storage, loc: storage)
+model_opt = checkpoint['opt']
+model = onmt.ModelConstructor.make_base_model(model_opt, fields, devid, checkpoint)
+
 nlls = None
 attns = None
 wordnlls = None
@@ -81,12 +89,6 @@ if os.path.isfile(nllpath) and os.path.isfile(attnpath) and os.path.isfile(wordp
     attns = torch.load(attnpath)
     wordnlls = torch.load(wordpath)
 else:
-    checkpoint = torch.load(
-        args.checkpoint_path,
-        map_location=lambda storage, loc: storage)
-    model_opt = checkpoint['opt']
-    model = onmt.ModelConstructor.make_base_model(model_opt, fields, devid, checkpoint)
-
     # Sentence, NLL pairs, sorted decreasing (worst sentences first)
     # And attention scores
     nlls = torch.FloatTensor(len(valid))
@@ -147,3 +149,24 @@ for i in range(args.worstn):
 
 torch.save(bad_examples, savepath + ".bad_examples")
 #with SummaryWriter(comment=args.modelname + ".validation"):
+    #
+    #
+def get_ngram_stats():
+    unigrams = [id for token, id in fields['src'].vocab.stoi.items() if len(token.split("_")) == 1]
+    bigrams = [id for token, id in fields['src'].vocab.stoi.items() if len(token.split("_")) == 2]
+    trigrams = [id for token, id in fields['src'].vocab.stoi.items() if len(token.split("_")) == 3]
+    fourgrams = [id for token, id in fields['src'].vocab.stoi.items() if len(token.split("_")) == 4]
+    unigramnorms = [model.encoder.embeddings(V(torch.LongTensor([id]).view(1,1,1).cuda())).norm() for id in unigrams]
+    bigramnorms = [model.encoder.embeddings(V(torch.LongTensor([id]).view(1,1,1).cuda())).norm() for id in bigrams]
+    trigramnorms = [model.encoder.embeddings(V(torch.LongTensor([id]).view(1,1,1).cuda())).norm() for id in trigrams]
+    fourgramnorms = [model.encoder.embeddings(V(torch.LongTensor([id]).view(1,1,1).cuda())).norm() for id in fourgrams]
+
+    unigramstats = (max(unigramnorms).data[0], sum(unigramnorms).data[0] / len(unigramnorms), min(unigramnorms).data[0])
+    bigramstats = (max(bigramnorms).data[0], sum(bigramnorms).data[0] / len(bigramnorms), min(bigramnorms).data[0])
+    trigramstats = (max(trigramnorms).data[0], sum(trigramnorms).data[0] / len(trigramnorms), min(trigramnorms).data[0])
+    fourgramstats = (max(fourgramnorms).data[0], sum(fourgramnorms).data[0] / len(fourgramnorms), min(fourgramnorms).data[0])
+
+    return unigramstats, bigramstats, trigramstats, fourgramstats
+#print(get_ngram_stats())
+
+import pdb; pdb.set_trace()

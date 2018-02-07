@@ -48,6 +48,11 @@ def model_opts(parser):
     parser.add_argument('-tgt_distractors', type=int, default=32,
                         help="""Use embeddings for phrases,
                         given the phrase mapping path.""")
+    parser.add_argument('-scale_phrases', action="store_true",
+                        help="""Scales phrase attention scores by # constituents.""")
+    parser.add_argument('-add_word_vectors', action="store_true",
+                        help="""Add word vectors to output of phrases,
+                        need repeated corpus.""")
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',

@@ -52,7 +52,8 @@ def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
                 bias=False,
                 batch_first=False,
                 bidirectional=True
-            )
+            ),
+            hasattr(opt, "add_word_vectors") and opt.add_word_vectors
         )
     return Embeddings(embedding_dim,
                       opt.position_encoding,
@@ -135,7 +136,8 @@ def make_decoder(opt, embeddings):
                                    opt.context_gate,
                                    opt.copy_attn,
                                    opt.dropout,
-                                   embeddings)
+                                   embeddings,
+                                   opt.scale_phrases if hasattr(opt, "scale_phrases") else None)
     else:
         return StdRNNDecoder(opt.rnn_type, opt.brnn,
                              opt.dec_layers, opt.rnn_size,
