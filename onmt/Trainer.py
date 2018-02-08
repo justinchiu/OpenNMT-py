@@ -103,7 +103,8 @@ class Trainer(object):
         attn_weights_gpu = None
         if self.model.decoder.scale_phrases:
             attn_weights_cpu = torch.FloatTensor()
-            attn_weights_gpu = torch.cuda.FloatTensor()
+            if self.train_iter.device >= 0:
+                attn_weights_gpu = torch.FloatTensor().cuda(self.train_iter.device)
 
         for i, batch in enumerate(self.train_iter):
             target_size = batch.tgt.size(0)
@@ -114,10 +115,20 @@ class Trainer(object):
             _, src_lengths = batch.src
 
             if self.model.decoder.scale_phrases:
-                attn_weights = torch.FloatTensor([[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()])
+                bsz = batch.tgt.size(1)
+                attn_weights_cpu.resize_(batch.src[0].size()).fill_(0)
+                nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                # not sure how slow this is
+                for x in range(bsz):
+                    for y in range(len(nwords[x])):
+                        attn_weights_cpu[y,x] = nwords[x][y]
+                attn_weights_cpu.log_()
                 if batch.tgt.is_cuda:
-                    attn_weights = attn_weights.cuda(batch.tgt.get_device())
-                attn_weights = V(attn_weights)
+                    attn_weights_gpu.resize_(attn_weights_cpu.size())
+                    attn_weights_gpu.copy_(attn_weights_cpu)
+                    attn_weights = V(attn_weights_gpu)
+                else:
+                    attn_weight = V(attn_weights_cpu)
             src = onmt.IO.make_features(batch, 'src')
             tgt_outer = onmt.IO.make_features(batch, 'tgt')
             if hasattr(self.model.generator[0], "phrase_lut"):

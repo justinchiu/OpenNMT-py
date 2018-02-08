@@ -136,7 +136,7 @@ class GlobalAttention(nn.Module):
         align = self.score(input, context)
 
         if weights is not None:
-            align = align * weights.view(batch, 1, sourceL)
+            align = align + weights.t().view(batch, 1, sourceL)
 
         if context_lengths is not None:
             mask = sequence_mask(context_lengths)
