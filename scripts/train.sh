@@ -486,7 +486,7 @@ train_phrase_scphrase_word_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -scale_phrases \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -gpuid 3 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -496,9 +496,9 @@ train_phrase_scphrase_word_nodistill() {
 generate_phrase_scphrase_word_nodistill() {
     name=phrase.scphrase.word.nodistill
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model /n/rush_lab/jc/onmt/models/$name/phrase.cphrase.word.nodistill.repeat.lr1.clip5_acc_62.25_ppl_7.94_e25.pt \
+        -model $MODEL/$name/phrase.scphrase.word.nodistill.lr1.clip5_acc_60.90_ppl_8.39_e17.pt \
         -gpu 3 \
-        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.repeat.de \
+        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.de \
         -output /n/rush_lab/jc/onmt/gen/$name.test.en \
         -beam_size 5
 }
@@ -511,7 +511,7 @@ train_phrase_amachine_word_nodistill() {
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -gpuid 3 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \

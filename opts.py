@@ -50,9 +50,12 @@ def model_opts(parser):
                         given the phrase mapping path.""")
     parser.add_argument('-scale_phrases', action="store_true",
                         help="""Scales phrase attention scores by # constituents.""")
+    parser.add_argument('-repeat_phrase_encoder', action="store_true",
+                        help="""Scales phrase attention scores by # constituents.""")
     parser.add_argument('-add_word_vectors', action="store_true",
-                        help="""Add word vectors to output of phrases,
-                        need repeated corpus.""")
+                        help="""Add word vectors to output of encoder,
+                        need repeated phrase encoder.""")
+
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',
