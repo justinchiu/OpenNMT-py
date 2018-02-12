@@ -396,7 +396,7 @@ class NMTModel(nn.Module):
     """
     The encoder + decoder Neural Machine Translation Model.
     """
-    def __init__(self, encoder, decoder, multigpu=False):
+    def __init__(self, encoder, decoder, ctxt_fn=None, multigpu=False):
         """
         Args:
             encoder(*Encoder): the various encoder.
@@ -407,8 +407,9 @@ class NMTModel(nn.Module):
         super(NMTModel, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
+        self.ctxt_fn = ctxt_fn
 
-    def forward(self, src, tgt, lengths, dec_state=None, attn_weights=None):
+    def forward(self, src, tgt, lengths, dec_state=None, attn_weights=None, ctxt_feats=None):
         """
         Args:
             src(FloatTensor): a sequence of source tensors with
@@ -426,9 +427,13 @@ class NMTModel(nn.Module):
         tgt = tgt[:-1]  # exclude last target from inputs
         enc_hidden, context = self.encoder(src, lengths)
         enc_state = self.decoder.init_decoder_state(src, context, enc_hidden)
+        context_lengths = None
+        if self.ctxt_fn is not None:
+            context, context_lengths = self.ctxt_fn(context)
         out, dec_state, attns = self.decoder(tgt, context,
                                              enc_state if dec_state is None
                                              else dec_state,
+                                             context_lengths=context_lengths,
                                              weights=attn_weights)
         if self.multigpu:
             # Not yet supported on multi-gpu

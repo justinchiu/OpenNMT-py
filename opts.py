@@ -48,14 +48,6 @@ def model_opts(parser):
     parser.add_argument('-tgt_distractors', type=int, default=32,
                         help="""Use embeddings for phrases,
                         given the phrase mapping path.""")
-    parser.add_argument('-scale_phrases', action="store_true",
-                        help="""Scales phrase attention scores by # constituents.""")
-    parser.add_argument('-repeat_phrase_encoder', action="store_true",
-                        help="""Scales phrase attention scores by # constituents.""")
-    parser.add_argument('-add_word_vectors', action="store_true",
-                        help="""Add word vectors to output of encoder,
-                        need repeated phrase encoder.""")
-
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',
@@ -106,6 +98,13 @@ def model_opts(parser):
                         choices=['dot', 'general', 'mlp'],
                         help="""The attention type to use:
                         dotprot or general (Luong) or MLP (Bahdanau)""")
+    parser.add_argument('-scale_phrases', action="store_true",
+                        help="""Scales phrase attention scores by # constituents.""")
+    parser.add_argument('-repeat_encoder_phrases', action="store_true",
+                        help="""Scales phrase attention scores by # constituents.""")
+    parser.add_argument('-add_word_vectors', action="store_true",
+                        help="""Add word vectors to output of encoder,
+                        need repeated phrase encoder.""")
 
     # Genenerator and loss options.
     parser.add_argument('-copy_attn', action="store_true",

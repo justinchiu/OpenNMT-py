@@ -13,6 +13,7 @@ from onmt.modules.StackedRNN import StackedLSTM, StackedGRU
 from onmt.modules.Embeddings import Embeddings
 from onmt.modules.WeightNorm import WeightNormConv2d
 from onmt.modules.PhrasePolytope import PhrasePolytope
+from onmt.modules.RepeatContext import RepeatContext
 
 from onmt.modules.SRU import check_sru_requirement
 can_use_sru = check_sru_requirement()

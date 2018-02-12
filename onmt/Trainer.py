@@ -114,7 +114,8 @@ class Trainer(object):
             dec_state = None
             _, src_lengths = batch.src
 
-            if self.model.decoder.scale_phrases:
+            attn_weights = None
+            if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
                 bsz = batch.tgt.size(1)
                 attn_weights_cpu.resize_(batch.src[0].size()).fill_(0)
                 nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
@@ -128,7 +129,10 @@ class Trainer(object):
                     attn_weights_gpu.copy_(attn_weights_cpu)
                     attn_weights = V(attn_weights_gpu)
                 else:
-                    attn_weight = V(attn_weights_cpu)
+                    attn_weights = V(attn_weights_cpu)
+            if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
+                rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                self.model.ctxt_fn.rle_to_idxs(rles)
             src = onmt.IO.make_features(batch, 'src')
             tgt_outer = onmt.IO.make_features(batch, 'tgt')
             if hasattr(self.model.generator[0], "phrase_lut"):
@@ -179,12 +183,37 @@ class Trainer(object):
 
         stats = Statistics()
 
-        attn_weights = None
+        attn_weights_cpu = None
+        attn_weights_gpu = None
+        if self.model.decoder.scale_phrases:
+            attn_weights_cpu = torch.FloatTensor()
+            if self.train_iter.device >= 0:
+                attn_weights_gpu = torch.FloatTensor().cuda(self.train_iter.device)
         with torch.no_grad():
             for batch in self.valid_iter:
                 _, src_lengths = batch.src
                 src = onmt.IO.make_features(batch, 'src')
                 tgt = onmt.IO.make_features(batch, 'tgt')
+
+                attn_weights = None
+                if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
+                    bsz = batch.tgt.size(1)
+                    attn_weights_cpu.resize_(batch.src[0].size()).fill_(0)
+                    nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                    # not sure how slow this is
+                    for x in range(bsz):
+                        for y in range(len(nwords[x])):
+                            attn_weights_cpu[y,x] = nwords[x][y]
+                    attn_weights_cpu.log_()
+                    if batch.tgt.is_cuda:
+                        attn_weights_gpu.resize_(attn_weights_cpu.size())
+                        attn_weights_gpu.copy_(attn_weights_cpu)
+                        attn_weights = V(attn_weights_gpu)
+                    else:
+                        attn_weights = V(attn_weights_cpu)
+                if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
+                    rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                    self.model.ctxt_fn.rle_to_idxs(rles)
 
                 # F-prop through the model.
                 outputs, attns, _ = self.model(src, tgt, src_lengths, attn_weights=attn_weights)

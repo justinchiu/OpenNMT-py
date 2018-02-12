@@ -11,7 +11,8 @@ from onmt.Models import NMTModel, MeanEncoder, RNNEncoder, \
                         StdRNNDecoder, InputFeedRNNDecoder
 from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
-                         CNNEncoder, CNNDecoder, PhrasePolytope
+                         CNNEncoder, CNNDecoder, PhrasePolytope, \
+                         RepeatContext
 from onmt.modules.Embeddings import PhraseEmbeddings
 
 
@@ -176,6 +177,10 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
                                model_opt.rnn_size,
                                model_opt.dropout)
 
+    ctxt_fn = (RepeatContext()
+        if hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases
+        else None)
+
     # Make decoder.
     tgt_dict = fields["tgt"].vocab
     # TODO: prepare for a future where tgt features are possible.
@@ -190,7 +195,7 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
     decoder = make_decoder(model_opt, tgt_embeddings)
 
     # Make NMTModel(= encoder + decoder).
-    model = NMTModel(encoder, decoder)
+    model = NMTModel(encoder, decoder, ctxt_fn=ctxt_fn)
 
     # Make Generator.
     if not model_opt.copy_attn and not (hasattr(model_opt, "tgt_phrase_mappings") and model_opt.tgt_phrase_mappings):

@@ -7,6 +7,8 @@ from torch.autograd import Variable as V
 import onmt
 from onmt.modules.Embeddings import PhraseEmbeddings
 
+from onmt.modules import RepeatContext
+
 from itertools import accumulate
 
 """
@@ -47,8 +49,15 @@ xp = torch.cat([pad.expand(1, N), x], 0)
 o = xp.gather(0, (torch.LongTensor(targets)+1).t())
 
 # Real attempt
-def rle_to_idx(rle, padidx):
-    maxlen = len(max())
+def rle_to_idxs(rles, padidx):
+    maxlen = max(map(sum, rles))
+    targets = [ [ x for i, count in enumerate(rle) for x in [i] * count ] for rle in rles ]
+    for i, target in enumerate(targets):
+        diff = maxlen - len(target)
+        if diff > 0:
+            target.extend([padidx] * diff)
+    return targets
+
 def repeat_elements(x, targets, pad):
     T, N, H = x.size()
     # We pad on the front with NaNs
@@ -59,6 +68,9 @@ def repeat_elements(x, targets, pad):
     # targets is contiguous along T, but we need it to be contiguous along N.
     return xp.gather(0, V(targets.view(-1, N, 1).expand(-1, N, H)))
 
+padidx = -1
+targets = rle_to_idxs(lengthss, padidx)
+pad = torch.FloatTensor(1).fill_(float("nan"))
 lut = nn.Embedding(50, 16)
 lut.weight.data.copy_(torch.arange(50).view(-1, 1).expand(50, 16))
 enc_out = lut(V(x.long()))
@@ -69,5 +81,8 @@ diff = context[:,:,0].data - o
 for lengths in lengthss:
     assert(diff[:sum(lengths),0].sum() == 0)
 
+ctxt_fn = RepeatContext(padidx)
+ctxt_fn.rle_to_idxs(lengthss)
+ctxt = ctxt_fn(lut(V(x.long())))
 # TODO(justinchiu): implementation 2: flatten + index
 

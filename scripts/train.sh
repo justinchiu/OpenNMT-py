@@ -503,13 +503,15 @@ generate_phrase_scphrase_word_nodistill() {
         -beam_size 5
 }
 
-train_phrase_amachine_word_nodistill() {
-    name=phrase.amachine.word.nodistill
+# cphraser has compositional source phrase + repeated after the encoder
+train_phrase_cphraser_word_nodistill() {
+    name=phrase.cphraser.word.nodistill
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
         -save_model $MODEL/$name/$name.lr1.clip5 \
         -gpuid 3 \
         -learning_rate 1 \
@@ -518,11 +520,40 @@ train_phrase_amachine_word_nodistill() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
-generate_phrase_amachine_word() {
+generate_phrase_cphraser_word() {
+    name=phrase.cphraser.word.nodistill
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model /n/rush_lab/jc/onmt/models/phrase.cmachine.word/phrase.cmachine.word.lr1.clip5_acc_58.83_ppl_25.27_e6.pt \
+        -model $MODEL/$name/phrase.cphraser.word.nodistill.lr1.clip5_acc_62.02_ppl_8.00_e25.pt \
         -gpu 3 \
-        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
-        -output /n/rush_lab/jc/onmt/gen/phrase.cmachine.word.test.en \
+        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.de \
+        -output /n/rush_lab/jc/onmt/gen/$name.test.en \
+        -beam_size 5
+}
+
+# cphraser has compositional source phrase + repeated after the encoder + original word embeddings
+train_phrase_cphrasere_word_nodistill() {
+    name=phrase.cphrasere.word.nodistill
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
+        -add_word_vectors \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        -gpuid 3 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+
+generate_phrase_cphrasere_word() {
+    name=phrase.cphrasere.word.nodistill
+    python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
+        -model $MODEL/$name/ \
+        -gpu 3 \
+        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.de \
+        -output /n/rush_lab/jc/onmt/gen/$name.test.en \
         -beam_size 5
 }

@@ -71,15 +71,21 @@ class Translator(object):
 
         #  (1) run the encoder on the src
         encStates, context = self.model.encoder(src, src_lengths)
+        if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
+            rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+            self.model.ctxt_fn.rle_to_idxs(rles)
+            context, context_lengths = self.model.ctxt_fn(context)
+        else:
+            context_lengths = src_lengths
         decStates = self.model.decoder.init_decoder_state(
-                                        src, context, encStates)
+            src, context, encStates)
 
         #  (2) if a target is specified, compute the 'goldScore'
         #  (i.e. log likelihood) of the target under the model
         tt = torch.cuda if self.opt.cuda else torch
         goldScores = tt.FloatTensor(batch.batch_size).fill_(0)
         decOut, decStates, attn = self.model.decoder(
-            tgt_in, context, decStates, context_lengths=src_lengths)
+            tgt_in, context, decStates, context_lengths=context_lengths)
 
         tgt_pad = self.fields["tgt"].vocab.stoi[onmt.IO.PAD_WORD]
         for dec, tgt in zip(decOut, batch.tgt[1:].data):
@@ -99,8 +105,14 @@ class Translator(object):
         _, src_lengths = batch.src
         src = onmt.IO.make_features(batch, 'src')
         encStates, context = self.model.encoder(src, src_lengths)
+        if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
+            rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+            self.model.ctxt_fn.rle_to_idxs(rles)
+            context, context_lengths = self.model.ctxt_fn(context)
+        else:
+            context_lengths = src_lengths
         decStates = self.model.decoder.init_decoder_state(
-                                        src, context, encStates)
+            src, context, encStates)
 
         #  (1b) Initialize for the decoder.
         def var(a): return Variable(a, volatile=True)
@@ -109,7 +121,7 @@ class Translator(object):
 
         # Repeat everything beam_size times.
         context = rvar(context.data)
-        context_lengths = src_lengths.repeat(beam_size)
+        context_lengths = context_lengths.repeat(beam_size)
         src = rvar(src.data)
         srcMap = rvar(batch.src_map.data)
         decStates.repeat_beam_size_times(beam_size)
