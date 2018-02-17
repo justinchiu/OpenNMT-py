@@ -48,6 +48,9 @@ def model_opts(parser):
     parser.add_argument('-tgt_distractors', type=int, default=32,
                         help="""Use embeddings for phrases,
                         given the phrase mapping path.""")
+    parser.add_argument('-share_context_embeddings', action='store_true',
+                        help="""Share the word embeddings between encoder
+                         and context.""")
 
     # RNN Options
     parser.add_argument('-encoder_type', type=str, default='rnn',
@@ -154,6 +157,9 @@ def train_opts(parser):
     parser.add_argument('-data', required=True,
                         help="""Path prefix to the ".train.pt" and
                         ".valid.pt" file path from preprocess.py""")
+    parser.add_argument('-dataword', type=str, default=None,
+                        help="""Path prefix to the ".train.pt" and
+                        ".valid.pt" file path from preprocess.py""")
 
     parser.add_argument('-srcdata', type=str, default=None,
                         help="""Path prefix to the ".train.pt" and
@@ -162,10 +168,12 @@ def train_opts(parser):
                         help="""Path prefix to the ".train.pt" and
                         ".valid.pt" file path from preprocess.py""")
 
+
     parser.add_argument('-save_model', default='model',
                         help="""Model filename (the model will be saved as
                         <save_model>_epochN_PPL.pt where PPL is the
                         validation perplexity""")
+
     parser.add_argument('-train_from', default='', type=str,
                         help="""If training from a checkpoint then this is the
                         path to the pretrained model's state_dict.""")
@@ -249,6 +257,9 @@ def train_opts(parser):
                         help="""Starting learning rate.
                         Recommended settings: sgd = 1, adagrad = 0.1,
                         adadelta = 1, adam = 0.001""")
+    parser.add_argument('-plr', type=float, default=1.0,
+                        help="""Starting learning rate for the
+                        phrase composition.""")
     parser.add_argument('-learning_rate_decay', type=float, default=0.5,
                         help="""If update_learning_rate, decay learning rate by
                         this much if (i) perplexity does not decrease on the
@@ -277,6 +288,9 @@ def translate_opts(parser):
     parser.add_argument('-model', required=True,
                         help='Path to model .pt file')
     parser.add_argument('-src',   required=True,
+                        help="""Source sequence to decode (one line per
+                        sequence)""")
+    parser.add_argument('-srcwords',   default=None,
                         help="""Source sequence to decode (one line per
                         sequence)""")
     parser.add_argument('-src_img_dir',   default="",

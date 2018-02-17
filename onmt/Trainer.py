@@ -69,7 +69,7 @@ class Statistics(object):
 class Trainer(object):
     def __init__(self, model, train_iter, valid_iter,
                  train_loss, valid_loss, optim,
-                 trunc_size, shard_size):
+                 trunc_size, shard_size, trainwords=None, validwords=None):
         """
         Args:
             model: the seq2seq model.
@@ -91,6 +91,10 @@ class Trainer(object):
         self.trunc_size = trunc_size
         self.shard_size = shard_size
 
+        # Phrase word
+        self.trainwords = trainwords
+        self.validwords = validwords
+
         # Set model in training mode.
         self.model.train()
 
@@ -101,7 +105,7 @@ class Trainer(object):
 
         attn_weights_cpu = None
         attn_weights_gpu = None
-        if self.model.decoder.scale_phrases:
+        if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
             attn_weights_cpu = torch.FloatTensor()
             if self.train_iter.device >= 0:
                 attn_weights_gpu = torch.FloatTensor().cuda(self.train_iter.device)
@@ -114,11 +118,15 @@ class Trainer(object):
             dec_state = None
             _, src_lengths = batch.src
 
+            src = onmt.IO.make_features(batch, 'src')
+            tgt_outer = onmt.IO.make_features(batch, 'tgt')
+
+            # Begin mods
             attn_weights = None
             if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
                 bsz = batch.tgt.size(1)
                 attn_weights_cpu.resize_(batch.src[0].size()).fill_(0)
-                nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.data.tolist()]
                 # not sure how slow this is
                 for x in range(bsz):
                     for y in range(len(nwords[x])):
@@ -133,8 +141,9 @@ class Trainer(object):
             if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
                 rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
                 self.model.ctxt_fn.rle_to_idxs(rles)
-            src = onmt.IO.make_features(batch, 'src')
-            tgt_outer = onmt.IO.make_features(batch, 'tgt')
+                if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
+                    self.model.ctxt_fn.dataset = self.trainwords
+                    self.model.ctxt_fn.get_words(batch.indices)
             if hasattr(self.model.generator[0], "phrase_lut"):
                 self.model.generator[0].reset_perm()
                 ctgt_outer = self.model.generator[0].collapse_target(tgt_outer)
@@ -143,6 +152,7 @@ class Trainer(object):
                 self.train_loss.criterion.weight.fill_(1)
                 self.train_loss.criterion.weight[self.train_loss.padding_idx] = 0
                 batch.tgt.copy_(ctgt_outer.squeeze(2)) # ? lol...
+            # end mods
 
             report_stats.n_src_words += src_lengths.sum()
 
@@ -214,6 +224,9 @@ class Trainer(object):
                 if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
                     rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
                     self.model.ctxt_fn.rle_to_idxs(rles)
+                    if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
+                        self.model.ctxt_fn.dataset = self.validwords
+                        self.model.ctxt_fn.get_words(batch.indices)
 
                 # F-prop through the model.
                 outputs, attns, _ = self.model(src, tgt, src_lengths, attn_weights=attn_weights)

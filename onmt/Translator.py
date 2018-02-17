@@ -71,6 +71,9 @@ class Translator(object):
 
         #  (1) run the encoder on the src
         encStates, context = self.model.encoder(src, src_lengths)
+        # TODO(justinchiu): scale attention
+        if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
+            pass
         if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
             rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
             self.model.ctxt_fn.rle_to_idxs(rles)
@@ -97,7 +100,7 @@ class Translator(object):
             goldScores += scores
         return goldScores
 
-    def translateBatch(self, batch, dataset):
+    def translateBatch(self, batch, dataset, datasetwords=None):
         beam_size = self.opt.beam_size
         batch_size = batch.batch_size
 
@@ -105,9 +108,15 @@ class Translator(object):
         _, src_lengths = batch.src
         src = onmt.IO.make_features(batch, 'src')
         encStates, context = self.model.encoder(src, src_lengths)
+        # TODO(justinchiu): scale attention
+        if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
+            pass
         if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
-            rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+            rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.data.tolist()]
             self.model.ctxt_fn.rle_to_idxs(rles)
+            if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
+                self.model.ctxt_fn.dataset = datasetwords
+                self.model.ctxt_fn.get_words(batch.indices)
             context, context_lengths = self.model.ctxt_fn(context)
         else:
             context_lengths = src_lengths
@@ -210,12 +219,12 @@ class Translator(object):
 
         return allHyps, allScores, allAttn, allGold
 
-    def translate(self, batch, data):
+    def translate(self, batch, data, datawords=None):
         #  (1) convert words to indexes
         batch_size = batch.batch_size
 
         #  (2) translate
-        pred, predScore, attn, goldScore = self.translateBatch(batch, data)
+        pred, predScore, attn, goldScore = self.translateBatch(batch, data, datawords)
         assert(len(goldScore) == len(pred))
         pred, predScore, attn, goldScore, i = list(zip(
             *sorted(zip(pred, predScore, attn, goldScore,

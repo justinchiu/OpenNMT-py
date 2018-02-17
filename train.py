@@ -135,7 +135,7 @@ def make_loss_compute(model, tgt_vocab, dataset, opt):
     return compute
 
 
-def train_model(model, train_data, valid_data, fields, optim):
+def train_model(model, train_data, valid_data, fields, optim, trainwords=None, validwords=None):
 
     train_iter = make_train_data_iter(train_data, opt)
     valid_iter = make_valid_data_iter(valid_data, opt)
@@ -150,7 +150,7 @@ def train_model(model, train_data, valid_data, fields, optim):
 
     trainer = onmt.Trainer(model, train_iter, valid_iter,
                            train_loss, valid_loss, optim,
-                           trunc_size, shard_size)
+                           trunc_size, shard_size, trainwords, validwords)
 
     for epoch in range(opt.start_epoch, opt.epochs + 1):
         print('')
@@ -228,7 +228,7 @@ def collect_features(train, fields):
     return src_features
 
 
-def build_model(model_opt, opt, fields, checkpoint):
+def build_model(model_opt, opt, fields, checkpoint, dataword=None):
     print('Building model...')
     model = onmt.ModelConstructor.make_base_model(model_opt, fields,
                                                   opt.gpuid[0], checkpoint)
@@ -272,6 +272,13 @@ def main():
     print(' * number of training sentences: %d' % len(train))
     print(' * maximum batch size: %d' % opt.batch_size)
 
+    trainwords = None
+    validword = None
+    if opt.dataword:
+        print("Loading train and validate data from '%s'" % opt.data)
+        trainwords = torch.load(opt.dataword + '.train.pt')
+        validword = torch.load(opt.dataword + '.valid.pt')
+
     # Load checkpoint if we resume from a previous training.
     if opt.train_from:
         print('Loading checkpoint from %s' % opt.train_from)
@@ -308,7 +315,7 @@ def main():
     optim = build_optim(model, checkpoint)
 
     # Do training.
-    train_model(model, train, valid, fields, optim)
+    train_model(model, train, valid, fields, optim, trainword, validword)
 
 
 if __name__ == "__main__":

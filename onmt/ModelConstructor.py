@@ -53,8 +53,7 @@ def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
                 bias=False,
                 batch_first=False,
                 bidirectional=True
-            ),
-            hasattr(opt, "add_word_vectors") and opt.add_word_vectors
+            )
         )
     return Embeddings(embedding_dim,
                       opt.position_encoding,
@@ -177,9 +176,19 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
                                model_opt.rnn_size,
                                model_opt.dropout)
 
-    ctxt_fn = (RepeatContext()
-        if hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases
-        else None)
+    ctxt_fn = None
+    if hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases \
+        and hasattr(model_opt, "add_word_vectors") and model_opt.add_word_vectors:
+        lut = nn.Embedding(src_dict.unigram_size, model_opt.rnn_size)
+        if model_opt.share_context_embeddings:
+            lut.weight = src_embeddings.lut.weight
+        ctxt_fn = RepeatContext(
+            field=fields["src"],
+            lut=lut,
+            dropout=model_opt.dropout
+        )
+    elif hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases:
+        ctxt_fn = RepeatContext()
 
     # Make decoder.
     tgt_dict = fields["tgt"].vocab

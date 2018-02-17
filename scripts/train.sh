@@ -29,33 +29,40 @@ LOG=/n/holylfs/LABS/rush_lab/jc/onmt/logs
 GEN=/n/rush_lab/jc/onmt/gen
 
 train_baseline() {
-    name=baseline3
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=baseline3.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
     	-data $DATA \
     	-save_model $MODEL/$name/$name \
-    	-gpuid 1 \
+        -seed $seed \
+    	-gpuid $1 \
     	| tee ${LOG}/$name.log
 }
 
 train_baseline_brnn() {
-    name=baseline-brnn2
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=baseline-brnn2.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
     	-data $DATA \
     	-save_model $MODEL/$name/$name \
-    	-gpuid 3 \
+        -seed $seed \
+        -epochs 25 \
+    	-gpuid $1 \
     	| tee ${LOG}/$name.log
 }
 
 train_bpe_baseline() {
-    name=baseline2bpe
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=baseline2bpe.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
     	-data $BPEDATA \
     	-save_model $MODEL/$name/$name \
-    	-gpuid 1 \
+        -seed $seed \
+    	-gpuid $1 \
     	| tee ${LOG}/$name.log
 }
 
@@ -99,18 +106,29 @@ generate_baseline_brnn_test() {
         -beam_size 5 
 }
 
+generate_baseline_brnn_test_FUCK() {
+    python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
+        -model $MODEL/baseline-brnn2/baseline-brnn2_acc_62.80_ppl_7.72_e13.pt \
+        -gpu 2 \
+        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
+        -output /n/rush_lab/jc/onmt/gen/baseline.brnn.test.en.FUCK \
+        -beam_size 5 
+}
+
 convert_to_phrases() {
     python /n/home13/jchiu/projects/bpephrase/python/ngrams.py
 }
 
 train_distill() {
-    name=distill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=distill.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $DISTILLDATA \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -127,13 +145,15 @@ generate_distill_test() {
 }
 
 train_phrase_machine_machine () {
-    name=phrase.machine.machine
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.machine.machine.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_MACHINE \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -141,13 +161,15 @@ train_phrase_machine_machine () {
 }
 
 train_phrase_machine_natural () {
-    name=phrase.machine.natural
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.machine.natural.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_NATURAL \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 1 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -155,13 +177,15 @@ train_phrase_machine_natural () {
 }
 
 train_phrase_natural_natural () {
-    name=phrase.natural.natural
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.natural.natural.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_NATURAL_NATURAL \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -187,13 +211,15 @@ generate_phrase_machine_machine() {
 }
 
 train_phrase_machine_word() {
-    name=phrase.machine.word
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.machine.word.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -201,13 +227,15 @@ train_phrase_machine_word() {
 }
 
 train_phrase_machine_word_nodistill() {
-    name=phrase.machine.word.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.machine.word.nodistill.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 1 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -234,14 +262,16 @@ generate_phrase_machine_word_nodistill() {
 
 # note that the source distribution is ALWAYS the same, so this is fine
 train_phrase_cmachine_word() {
-    name=phrase.cmachine.word
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cmachine.word.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 1 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -258,40 +288,36 @@ generate_phrase_cmachine_word() {
 }
 
 train_phrase_cmachine_word_nodistill() {
-    name=phrase.cmachine.word.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cmachine.word.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
-generate_phrase_cmachine_word() {
-    python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model /n/rush_lab/jc/onmt/models/phrase.cmachine.word/phrase.cmachine.word.lr1.clip5_acc_58.83_ppl_25.27_e6.pt \
-        -gpu 3 \
-        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
-        -output /n/rush_lab/jc/onmt/gen/phrase.cmachine.word.test.en \
-        -beam_size 5
-}
-
 generate_phrase_cmachine_word_nodistill() {
+#        -model /n/rush_lab/jc/onmt/models/phrase.cmachine.word.nodistill/phrase.cmachine.word.nodistill.lr1.clip5_acc_61.80_ppl_8.08_e18.pt \
+    name=phrase.cmachine.word.nodistill.s33
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model /n/rush_lab/jc/onmt/models/phrase.cmachine.word.nodistill/phrase.cmachine.word.nodistill.lr1.clip5_acc_61.80_ppl_8.08_e18.pt \
+        -model $MODEL/$name/phrase.cmachine.word.nodistill.s33.lr1.clip5_acc_61.96_ppl_8.01_e15.pt \
         -gpu 2 \
         -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
-        -output /n/rush_lab/jc/onmt/gen/phrase.cmachine.word.nodistill.test.en \
+        -output /n/rush_lab/jc/onmt/gen/$name.test.en \
         -beam_size 5
 }
 
 train_phrase_cmachine_scmachine() {
-    name=phrase.cmachine.scmachine
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cmachine.scmachine.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_MACHINE \
@@ -300,7 +326,8 @@ train_phrase_cmachine_scmachine() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -tgt_distractors 2048 \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -308,7 +335,8 @@ train_phrase_cmachine_scmachine() {
 }
 
 train_phrase_cmachine_scmachine_nodistill() {
-    name=phrase.cmachine.scmachine.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cmachine.scmachine.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_MACHINE_NODISTILL \
@@ -317,7 +345,8 @@ train_phrase_cmachine_scmachine_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -tgt_distractors 2048 \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -334,7 +363,8 @@ generate_phrase_cmachine_scmachine_nodistill() {
 }
 
 train_phrase_word_scnatural_nodistill() {
-    name=phrase.word.scnatural.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.word.scnatural.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
@@ -342,7 +372,8 @@ train_phrase_word_scnatural_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -tgt_distractors 2048 \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -350,7 +381,8 @@ train_phrase_word_scnatural_nodistill() {
 }
 
 train_phrase_cnatural_scnatural_nodistill() {
-    name=phrase.cnatural.scnatural.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cnatural.scnatural.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_NATURAL_NATURAL_NODISTILL \
@@ -359,7 +391,8 @@ train_phrase_cnatural_scnatural_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -tgt_distractors 2048 \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -367,7 +400,8 @@ train_phrase_cnatural_scnatural_nodistill() {
 }
 
 dbg_train_phrase_cnatural_scnatural_nodistill() {
-    name=phrase.cnatural.scnatural.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cnatural.scnatural.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_NATURAL_NATURAL_NODISTILL \
@@ -376,7 +410,8 @@ dbg_train_phrase_cnatural_scnatural_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -tgt_distractors 2048 \
         -save_model /tmp/trash \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 
@@ -401,13 +436,15 @@ generate_phrase_word_scnatural_nodistill() {
 }
 
 train_phrase_word_natural_nodistill() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
     #name=phrase.word.natural.nodistill
-    name=phrase.word.natural.nodistill2
+    name=phrase.word.natural.nodistill2.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 0 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -427,13 +464,15 @@ generate_phrase_word_natural_nodistill() {
 # Repeat Corpus
 
 train_phrase_phrase_word_nodistill_repeat() {
-    name=phrase.phrase.word.nodistill.repeat
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.phrase.word.nodistill.repeat.s$seed
     mkdir -p $MODEL/$name
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_PHRASE_WORD_NODISTILL_REPEAT \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -451,14 +490,16 @@ generate_phrase_phrase_word_nodistill_repeat() {
 }
 
 train_phrase_cphrase_word_nodistill_repeat() {
-    name=phrase.cphrase.word.nodistill.repeat
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrase.word.nodistill.repeat.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_PHRASE_WORD_NODISTILL_REPEAT \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 2 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -478,7 +519,8 @@ generate_phrase_cphrase_word_nodistill_repeat() {
 # scphrase on the source side means scaled compositional phrases
 # differs from target side, which is sampled compositional phrases
 train_phrase_scphrase_word_nodistill() {
-    name=phrase.scphrase.word.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.scphrase.word.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
@@ -486,7 +528,8 @@ train_phrase_scphrase_word_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -scale_phrases \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -505,7 +548,8 @@ generate_phrase_scphrase_word_nodistill() {
 
 # cphraser has compositional source phrase + repeated after the encoder
 train_phrase_cphraser_word_nodistill() {
-    name=phrase.cphraser.word.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphraser.word.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
@@ -513,7 +557,8 @@ train_phrase_cphraser_word_nodistill() {
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -521,9 +566,11 @@ train_phrase_cphraser_word_nodistill() {
 }
 
 generate_phrase_cphraser_word() {
-    name=phrase.cphraser.word.nodistill
+    name=phrase.cphraser.word.nodistill.s148
+    #name=phrase.cphraser.word.nodistill.s181
+        #-model $MODEL/$name/$name.lr1.clip5_acc_61.88_ppl_8.03_e20.pt \
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model $MODEL/$name/phrase.cphraser.word.nodistill.lr1.clip5_acc_62.02_ppl_8.00_e25.pt \
+        -model $MODEL/$name/$name.lr1.clip5_acc_61.88_ppl_8.06_e16.pt \
         -gpu 3 \
         -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.de \
         -output /n/rush_lab/jc/onmt/gen/$name.test.en \
@@ -532,16 +579,82 @@ generate_phrase_cphraser_word() {
 
 # cphraser has compositional source phrase + repeated after the encoder + original word embeddings
 train_phrase_cphrasere_word_nodistill() {
-    name=phrase.cphrasere.word.nodistill
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrasere.word.nodistill.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -dataword $DATA \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
+        -add_word_vectors \
+        -share_context_embeddings \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+
+train_phrase_cphrasere_word_nodistill_nosharectxtemb() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrasere.word.nodistill.nosharectxtemb.s$seed
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -dataword $DATA \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
         -add_word_vectors \
         -save_model $MODEL/$name/$name.lr1.clip5 \
-        -gpuid 3 \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+
+train_phrase_cphrasere_word_nodistill_moredropout() {
+    # Note...this is added INTO the code, so it'll be hard to pull it out.
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrasere.word.nodistill.moredropout.s$seed
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -dataword $DATA \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
+        -add_word_vectors \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+
+train_phrase_cphrasere_word_nodistill_nosharectxtemb_moredropout() {
+    # Note...this is added INTO the code, so it'll be hard to pull it out.
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrasere.word.nodistill.nosharectxtemb.moredropout.s$seed
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -dataword $DATA \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
+        -add_word_vectors \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        -seed $seed \
+        -gpuid $1 \
         -learning_rate 1 \
         -max_grad_norm 5 \
         -epochs 25 \
@@ -551,9 +664,29 @@ train_phrase_cphrasere_word_nodistill() {
 generate_phrase_cphrasere_word() {
     name=phrase.cphrasere.word.nodistill
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model $MODEL/$name/ \
-        -gpu 3 \
+        -model $MODEL/$name/phrase.cphrasere.word.nodistill.lr1.clip5_acc_59.11_ppl_9.15_e10.pt \
+        -gpu 0 \
         -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.phrase.de \
+        -srcwords /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
         -output /n/rush_lab/jc/onmt/gen/$name.test.en \
         -beam_size 5
+}
+
+train_phrase_cphrase_word_nodistill_plr() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphrase.word.nodistill.plr.s$seed
+    plr=2
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -phrase_lr $plr \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        | tee ${LOG}/$name.lr1.clip5.plr$plr.log
 }

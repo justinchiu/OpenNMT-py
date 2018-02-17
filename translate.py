@@ -59,6 +59,12 @@ def main():
         opt.src, opt.tgt, translator.fields,
         use_filter_pred=False)
 
+    datawords = None
+    if opt.srcwords is not None:
+        datawords = onmt.IO.ONMTDataset(
+            opt.srcwords, opt.tgt, translator.fields,
+            use_filter_pred=False)
+
     test_data = onmt.IO.OrderedIterator(
         dataset=data, device=opt.gpu,
         batch_size=opt.batch_size, train=False, sort=False,
@@ -67,7 +73,7 @@ def main():
     counter = count(1)
     for batch in test_data:
         pred_batch, gold_batch, pred_scores, gold_scores, attn, src \
-            = translator.translate(batch, data)
+            = translator.translate(batch, data, datawords)
         pred_score_total += sum(score[0] for score in pred_scores)
         pred_words_total += sum(len(x[0]) for x in pred_batch)
         if opt.tgt:
