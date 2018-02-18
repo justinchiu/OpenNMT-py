@@ -199,7 +199,8 @@ class Trainer(object):
             attn_weights_cpu = torch.FloatTensor()
             if self.train_iter.device >= 0:
                 attn_weights_gpu = torch.FloatTensor().cuda(self.train_iter.device)
-        with torch.no_grad():
+        #with torch.no_grad():
+        if True:
             for batch in self.valid_iter:
                 _, src_lengths = batch.src
                 src = onmt.IO.make_features(batch, 'src')

@@ -109,7 +109,8 @@ def make_encoder(opt, embeddings):
     else:
         # "rnn" or "brnn"
         return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
-                          opt.rnn_size, opt.dropout, embeddings)
+                          opt.rnn_size, opt.dropout, embeddings,
+                          opt.add_word_vectors)
 
 
 def make_decoder(opt, embeddings):
@@ -178,7 +179,7 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
 
     ctxt_fn = None
     if hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases \
-        and hasattr(model_opt, "add_word_vectors") and model_opt.add_word_vectors:
+        and hasattr(model_opt, "add_word_vectors_phrase") and model_opt.add_word_vectors_phrase:
         lut = nn.Embedding(src_dict.unigram_size, model_opt.rnn_size)
         if model_opt.share_context_embeddings:
             lut.weight = src_embeddings.lut.weight

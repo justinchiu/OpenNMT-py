@@ -101,11 +101,14 @@ def model_opts(parser):
                         choices=['dot', 'general', 'mlp'],
                         help="""The attention type to use:
                         dotprot or general (Luong) or MLP (Bahdanau)""")
+    parser.add_argument('-add_word_vectors', action="store_true",
+                        help="""Add word vectors to output of encoder,
+                        applies to baseline model.""")
     parser.add_argument('-scale_phrases', action="store_true",
                         help="""Scales phrase attention scores by # constituents.""")
     parser.add_argument('-repeat_encoder_phrases', action="store_true",
                         help="""Scales phrase attention scores by # constituents.""")
-    parser.add_argument('-add_word_vectors', action="store_true",
+    parser.add_argument('-add_word_vectors_phrase', action="store_true",
                         help="""Add word vectors to output of encoder,
                         need repeated phrase encoder.""")
 

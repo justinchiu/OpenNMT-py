@@ -1,6 +1,7 @@
 from __future__ import division
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
@@ -53,7 +54,7 @@ class MeanEncoder(EncoderBase):
 class RNNEncoder(EncoderBase):
     """ The standard RNN encoder. """
     def __init__(self, rnn_type, bidirectional, num_layers,
-                 hidden_size, dropout, embeddings):
+                 hidden_size, dropout, embeddings, add_word_vectors=False):
         super(RNNEncoder, self).__init__()
 
         num_directions = 2 if bidirectional else 1
@@ -80,6 +81,10 @@ class RNNEncoder(EncoderBase):
                     dropout=dropout,
                     bidirectional=bidirectional)
 
+        self.add_word_vectors = add_word_vectors
+        if add_word_vectors:
+            self.proj = nn.Linear(hidden_size * num_directions, 1)
+
     def forward(self, input, lengths=None, hidden=None):
         """ See EncoderBase.forward() for description of args and returns."""
         self._check_args(input, lengths, hidden)
@@ -97,6 +102,11 @@ class RNNEncoder(EncoderBase):
 
         if lengths is not None and not self.no_pack_padded_seq:
             outputs = unpack(outputs)[0]
+
+        if self.add_word_vectors:
+            # context_gate, but modified
+            p = F.sigmoid(self.proj(outputs + emb))
+            outputs = (1-p) * outputs + p * emb
 
         return hidden_t, outputs
 

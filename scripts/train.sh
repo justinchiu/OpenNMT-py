@@ -590,7 +590,7 @@ train_phrase_cphrasere_word_nodistill() {
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
-        -add_word_vectors \
+        -add_word_vectors_phrase \
         -share_context_embeddings \
         -save_model $MODEL/$name/$name.lr1.clip5 \
         -seed $seed \
@@ -611,7 +611,7 @@ train_phrase_cphrasere_word_nodistill_nosharectxtemb() {
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
-        -add_word_vectors \
+        -add_word_vectors_phrase \
         -save_model $MODEL/$name/$name.lr1.clip5 \
         -seed $seed \
         -gpuid $1 \
@@ -632,7 +632,7 @@ train_phrase_cphrasere_word_nodistill_moredropout() {
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
-        -add_word_vectors \
+        -add_word_vectors_phrase \
         -save_model $MODEL/$name/$name.lr1.clip5 \
         -seed $seed \
         -gpuid $1 \
@@ -653,7 +653,7 @@ train_phrase_cphrasere_word_nodistill_nosharectxtemb_moredropout() {
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
-        -add_word_vectors \
+        -add_word_vectors_phrase \
         -save_model $MODEL/$name/$name.lr1.clip5 \
         -seed $seed \
         -gpuid $1 \
@@ -691,4 +691,23 @@ train_phrase_cphrase_word_nodistill_plr() {
         -max_grad_norm 5 \
         -epochs 25 \
         | tee ${LOG}/$name.lr1.clip5.plr$plr.log
+}
+
+# cphraser has compositional source phrase + repeated after the encoder + original word embeddings
+train_baseline_brnn_add_word_attn() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=baseline.brnn.e.s$seed
+    echo "Logging to ${LOG}/$name.lr1.clip5.log"
+    echo "Saving to $MODEL/$name/$name.lr1.clip5"
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $DATA \
+        -add_word_vectors \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        | tee ${LOG}/$name.lr1.clip5.log
 }
