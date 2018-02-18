@@ -157,7 +157,7 @@ def train_opts(parser):
     parser.add_argument('-data', required=True,
                         help="""Path prefix to the ".train.pt" and
                         ".valid.pt" file path from preprocess.py""")
-    parser.add_argument('-dataword', type=str, default=None,
+    parser.add_argument('-datawords', type=str, default=None,
                         help="""Path prefix to the ".train.pt" and
                         ".valid.pt" file path from preprocess.py""")
 

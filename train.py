@@ -228,7 +228,7 @@ def collect_features(train, fields):
     return src_features
 
 
-def build_model(model_opt, opt, fields, checkpoint, dataword=None):
+def build_model(model_opt, opt, fields, checkpoint):
     print('Building model...')
     model = onmt.ModelConstructor.make_base_model(model_opt, fields,
                                                   opt.gpuid[0], checkpoint)
@@ -273,11 +273,11 @@ def main():
     print(' * maximum batch size: %d' % opt.batch_size)
 
     trainwords = None
-    validword = None
-    if opt.dataword:
+    validwords = None
+    if opt.datawords:
         print("Loading train and validate data from '%s'" % opt.data)
-        trainwords = torch.load(opt.dataword + '.train.pt')
-        validword = torch.load(opt.dataword + '.valid.pt')
+        trainwords = torch.load(opt.datawords + '.train.pt')
+        validwords = torch.load(opt.datawords + '.valid.pt')
 
     # Load checkpoint if we resume from a previous training.
     if opt.train_from:
@@ -315,7 +315,7 @@ def main():
     optim = build_optim(model, checkpoint)
 
     # Do training.
-    train_model(model, train, valid, fields, optim, trainword, validword)
+    train_model(model, train, valid, fields, optim, trainwords, validwords)
 
 
 if __name__ == "__main__":

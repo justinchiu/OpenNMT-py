@@ -139,7 +139,7 @@ class Trainer(object):
                 else:
                     attn_weights = V(attn_weights_cpu)
             if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
-                rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.data.tolist()]
                 self.model.ctxt_fn.rle_to_idxs(rles)
                 if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
                     self.model.ctxt_fn.dataset = self.trainwords

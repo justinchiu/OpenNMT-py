@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from torch.autograd import Variable as V
 from torch.nn import Parameter 
@@ -21,6 +22,8 @@ class RepeatContext(nn.Module):
         self.field = field
         self.dataset = dataset# NEEDS TO BE SET DEPENDING ON DATA...
         self.lut = lut
+        if lut is not None:
+            self.proj = nn.Linear(lut.weight.size(-1), 1)
 
     def rle_to_idxs(self, rles):
         lengths = list(map(sum, rles))
@@ -50,6 +53,13 @@ class RepeatContext(nn.Module):
         # We pad on the front with NaNs
         px = torch.cat([self.pad.expand(1, N, H), x], 0)
         out = px.gather(0, self.targets.view(-1, N, 1).expand(-1, N, H))
-        return (out if self.lut is None else out + self.lut(self.word_idxs), self.lengths)
-
+        if self.lut is None:
+            return out, self.lengths
+        else:
+            # This will be the source embeddings, either directly the words
+            # or the positions.
+            wout = self.lut(self.word_idxs)
+            # hm...how to decide?
+            p = F.sigmoid(self.proj(out + wout))
+            return (1-p) * out + p * wout, self.lengths
 

@@ -581,6 +581,8 @@ generate_phrase_cphraser_word() {
 train_phrase_cphrasere_word_nodistill() {
     seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
     name=phrase.cphrasere.word.nodistill.s$seed
+    echo "Logging to ${LOG}/$name.lr1.clip5.log"
+    echo "Saving to $MODEL/$name/$name.lr1.clip5"
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
