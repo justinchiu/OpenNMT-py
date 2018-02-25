@@ -13,7 +13,7 @@ from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
                          CNNEncoder, CNNDecoder, PhrasePolytope, \
                          RepeatContext
-from onmt.modules.Embeddings import PhraseEmbeddings
+from onmt.modules.Embeddings import PhraseEmbeddings, PositionalEncoding
 
 
 def make_embeddings(opt, word_dict, feature_dicts, for_encoder=True):
@@ -110,7 +110,7 @@ def make_encoder(opt, embeddings):
         # "rnn" or "brnn"
         return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
                           opt.rnn_size, opt.dropout, embeddings,
-                          opt.add_word_vectors)
+                          hasattr(opt, "add_word_vectors") and opt.add_word_vectors)
 
 
 def make_decoder(opt, embeddings):
@@ -188,6 +188,17 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
             lut=lut,
             dropout=model_opt.dropout
         )
+    elif hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases \
+        and hasattr(model_opt, "add_position_vectors_phrase") and model_opt.add_position_vectors_phrase:
+        maxlen = 500
+        pe = PositionalEncoding(0, model_opt.rnn_size, maxlen)
+        poslut = nn.Embedding(maxlen, model_opt.rnn_size)
+        poslut.weight.data.copy_(pe.pe.squeeze())
+        ctxt_fn = RepeatContext(
+            field=fields["src"],
+            poslut=poslut,
+            dropout=model_opt.dropout
+        )
     elif hasattr(model_opt, "repeat_encoder_phrases") and model_opt.repeat_encoder_phrases:
         ctxt_fn = RepeatContext()
 
@@ -234,6 +245,12 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
             checkpoint["model"]["decoder.embeddings._buf"].resize_(0)
         if "0.phrase_lut._buf" in checkpoint["generator"]:
             checkpoint["generator"]["0.phrase_lut._buf"].resize_(0)
+        if "ctxt_fn.lut.weight" in checkpoint["model"]:
+            V, H = checkpoint["model"]["ctxt_fn.lut.weight"].size()
+            model.ctxt_fn.lut = nn.Embedding(V, H)
+        if "ctxt_fn.poslut.weight" in checkpoint["model"]:
+            V, H = checkpoint["model"]["ctxt_fn.poslut.weight"].size()
+            model.ctxt_fn.posweight = nn.Embedding(V, H)
         model.load_state_dict(checkpoint['model'])
         generator.load_state_dict(checkpoint['generator'])
     else:

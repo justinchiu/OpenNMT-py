@@ -17,8 +17,10 @@ def sequence_mask(lengths, max_len=None):
     """
     batch_size = lengths.numel()
     max_len = max_len or lengths.max()
-    return (torch.arange(0, max_len)
-            .type_as(lengths)
+    mask = torch.arange(0, max_len).type_as(lengths)
+    if lengths.is_cuda:
+        mask = mask.cuda(lengths.get_device())
+    return (mask
             .repeat(batch_size, 1)
             .lt(lengths.unsqueeze(1)))
 

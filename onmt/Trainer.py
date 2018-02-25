@@ -19,16 +19,16 @@ from torch.autograd import Variable as V
 import onmt
 import onmt.modules
 
-import numpy as np
 
 class Statistics(object):
     """
     Train/validate loss statistics.
     """
-    def __init__(self, loss=0, n_words=0, n_correct=0):
+    def __init__(self, loss=0, n_words=0, n_correct=0, n_phrases=0):
         self.loss = loss
         self.n_words = n_words
         self.n_correct = n_correct
+        self.n_phrases = n_phrases
         self.n_src_words = 0
         self.start_time = time.time()
 
@@ -36,9 +36,11 @@ class Statistics(object):
         self.loss += stat.loss
         self.n_words += stat.n_words
         self.n_correct += stat.n_correct
+        self.n_phrases += stat.n_phrases
 
     def accuracy(self):
-        return 100 * (self.n_correct / self.n_words)
+        return (100 * (self.n_correct / self.n_words)
+            if self.n_phrases == 0 else 100 * (self.n_correct / self.n_phrases))
 
     def ppl(self):
         return math.exp(min(self.loss / self.n_words, 100))
@@ -144,6 +146,10 @@ class Trainer(object):
                 if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
                     self.model.ctxt_fn.dataset = self.trainwords
                     self.model.ctxt_fn.get_words(batch.indices)
+                if hasattr(self.model.ctxt_fn, "poslut") and self.model.ctxt_fn.poslut is not None:
+                    # For the positions we just need the lengths of the source sentences
+                    self.model.ctxt_fn.dataset = self.trainwords
+                    self.model.ctxt_fn.get_positions(batch.indices)
             if hasattr(self.model.generator[0], "phrase_lut"):
                 self.model.generator[0].reset_perm()
                 ctgt_outer = self.model.generator[0].collapse_target(tgt_outer)
@@ -210,7 +216,7 @@ class Trainer(object):
                 if hasattr(self.model.decoder, "scale_phrases") and self.model.decoder.scale_phrases:
                     bsz = batch.tgt.size(1)
                     attn_weights_cpu.resize_(batch.src[0].size()).fill_(0)
-                    nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                    nwords = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.data.tolist()]
                     # not sure how slow this is
                     for x in range(bsz):
                         for y in range(len(nwords[x])):
@@ -223,11 +229,15 @@ class Trainer(object):
                     else:
                         attn_weights = V(attn_weights_cpu)
                 if hasattr(self.model, "ctxt_fn") and self.model.ctxt_fn is not None:
-                    rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.tolist()]
+                    rles = [[word.count("_")+1 for word in batch.dataset[idx].src] for idx in batch.indices.data.tolist()]
                     self.model.ctxt_fn.rle_to_idxs(rles)
                     if hasattr(self.model.ctxt_fn, "lut") and self.model.ctxt_fn.lut is not None:
                         self.model.ctxt_fn.dataset = self.validwords
                         self.model.ctxt_fn.get_words(batch.indices)
+                    if hasattr(self.model.ctxt_fn, "poslut") and self.model.ctxt_fn.poslut is not None:
+                        # For the positions we just need the lengths of the source sentences
+                        self.model.ctxt_fn.dataset = self.validwords
+                        self.model.ctxt_fn.get_positions(batch.indices)
 
                 # F-prop through the model.
                 outputs, attns, _ = self.model(src, tgt, src_lengths, attn_weights=attn_weights)

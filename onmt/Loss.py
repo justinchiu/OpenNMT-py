@@ -84,12 +84,14 @@ class LossComputeBase(nn.Module):
             loss(Tensor): the loss computed by the loss criterion.
             scores(Tensor): a sequence of predict output with scores.
         """
+        count_weights = self.word_counts.index_select(0, target)
         pred = scores.max(1)[1]
         non_padding = target.ne(self.padding_idx)
-        num_correct = pred.eq(target) \
-                          .masked_select(non_padding) \
-                          .sum()
-        return onmt.Statistics(loss[0], non_padding.sum(), num_correct)
+        #count_weights = non_padding.new(non_padding.size()).fill_(1)
+        num_correct = ((pred.eq(target) * count_weights)
+                          .masked_select(non_padding)
+                          .sum())
+        return onmt.Statistics(loss[0], non_padding.sum(), num_correct, (non_padding * count_weights).sum())
 
     def bottle(self, v):
         return v.view(-1, v.size(2))
@@ -104,6 +106,10 @@ class NMTLossCompute(LossComputeBase):
     """
     def __init__(self, generator, tgt_vocab):
         super(NMTLossCompute, self).__init__(generator, tgt_vocab)
+        # self.tgt_vocab = tgt_vocab
+        self.register_buffer("word_counts", torch.ByteTensor(
+            [x.count("_")+1 for x in tgt_vocab.itos]
+        ))
 
         weight = torch.ones(len(tgt_vocab))
         weight[self.padding_idx] = 0

@@ -237,7 +237,7 @@ class PhraseEmbeddings(nn.Module):
             revmap = {v: k for k, v in enumerate(indices)}
             pos = phrases.apply_(lambda x: revmap[x])
             if input.is_cuda:
-                pos = pos.cuda()
+                pos = pos.cuda(input.get_device())
 
             max_len = lengths[0]
             self._buf.resize_(max_len, len(indices)).fill_(0)

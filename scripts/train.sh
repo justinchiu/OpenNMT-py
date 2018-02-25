@@ -451,6 +451,22 @@ train_phrase_word_natural_nodistill() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
+train_phrase_word_natural_nodistill_pacc() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    #name=phrase.word.natural.nodistill
+    name=phrase.word.natural.nodistill.pacc.s$seed
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+
 generate_phrase_word_natural_nodistill() {
     #-model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill/phrase.word.natural.nodistill.lr1.clip5_acc_42.02_ppl_47.73_e13.pt \
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
@@ -586,7 +602,7 @@ train_phrase_cphrasere_word_nodistill() {
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
-        -dataword $DATA \
+        -datawords $DATA \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
@@ -607,7 +623,7 @@ train_phrase_cphrasere_word_nodistill_nosharectxtemb() {
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
-        -dataword $DATA \
+        -datawords $DATA \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
@@ -628,7 +644,7 @@ train_phrase_cphrasere_word_nodistill_moredropout() {
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
-        -dataword $DATA \
+        -datawords $DATA \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
@@ -649,7 +665,7 @@ train_phrase_cphrasere_word_nodistill_nosharectxtemb_moredropout() {
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
         -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
-        -dataword $DATA \
+        -datawords $DATA \
         -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
         -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         -repeat_encoder_phrases \
@@ -711,3 +727,27 @@ train_baseline_brnn_add_word_attn() {
         -save_model $MODEL/$name/$name.lr1.clip5 \
         | tee ${LOG}/$name.lr1.clip5.log
 }
+
+# repeat encoder output for phrases n times and add position encodings
+train_phrase_cphraserp_word_nodistill() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.cphraserp.word.nodistill.s$seed
+    echo "Logging to ${LOG}/$name.lr1.clip5.log"
+    echo "Saving to $MODEL/$name/$name.lr1.clip5"
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -data $PHRASEDATA_MACHINE_WORD_NODISTILL \
+        -datawords $DATA \
+        -src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -repeat_encoder_phrases \
+        -add_position_vectors_phrase \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        | tee ${LOG}/$name.lr1.clip5.log
+}
+

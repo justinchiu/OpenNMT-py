@@ -22,7 +22,7 @@ validate_baseline () {
         --checkpoint_path $MODEL/baseline-brnn2/baseline-brnn2_acc_62.80_ppl_7.72_e13.pt \
         --modelname $name \
         --savepath $SAVE/$name \
-        --devid 0
+        --devid $1
 }
 
 validate_phrase_cnatural_scnatural_nodistill () {
@@ -36,7 +36,7 @@ validate_phrase_cnatural_scnatural_nodistill () {
         --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         --modelname $name \
         --savepath $SAVE/$name \
-        --devid 0
+        --devid $1
 }
 
 validate_phrase_cnatural_word_nodistill () {
@@ -49,9 +49,10 @@ validate_phrase_cnatural_word_nodistill () {
         --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         --modelname $name \
         --savepath $SAVE/$name \
-        --devid 0
+        --devid $1
 }
 
+# bad repeat, on the embeddings.
 validate_phrase_cnatural_word_nodistill_repeat () {
     name=phrase.cphrase.word.nodistill.repeat
     mkdir -p $SAVE/$name
@@ -62,5 +63,48 @@ validate_phrase_cnatural_word_nodistill_repeat () {
         --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
         --modelname $name \
         --savepath $SAVE/$name \
-        --devid 0
+        --devid $1
+}
+
+# repeat output of encdoer
+# we use datawords here as a hack during viz
+validate_phrase_cphraser_word_nodistill() {
+    name=phrase.cphraser.word.nodistill.s148
+    mkdir -p $SAVE/$name
+    python /n/home13/jchiu/projects/OpenNMT-py/validate.py \
+        --data $PHRASEDATA_NATURAL_WORD_NODISTILL \
+        --data $PHRASEDATA_NATURAL_WORD_NODISTILL_REPEAT \
+        --checkpoint_path /n/rush_lab/jc/onmt/models/$name/$name.lr1.clip5_acc_61.87_ppl_8.06_e25.pt \
+        --src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        --modelname $name \
+        --savepath $SAVE/$name \
+        --devid $1
+}
+
+# repeat output of encdoer
+validate_phrase_cphrasere_word_nodistill() {
+    name=phrase.cphrasere.word.nodistill.s137
+    mkdir -p $SAVE/$name
+    python /n/home13/jchiu/projects/OpenNMT-py/validate.py \
+        --data $PHRASEDATA_NATURAL_WORD_NODISTILL \
+        --datawords $DATA \
+        --checkpoint_path /n/rush_lab/jc/onmt/models/$name/$name.lr1.clip5_acc_60.00_ppl_8.97_e12.pt \
+        --src_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.src.pkl \
+        --unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        --modelname $name \
+        --savepath $SAVE/$name \
+        --devid $1
+}
+
+# mixed skip connection between encoding and embedding
+validate_baseline_brnn_add_word_attn() {
+    name=baseline.brnn.e.s218
+    mkdir -p $SAVE/$name
+    python /n/home13/jchiu/projects/OpenNMT-py/validate.py \
+        --data $DATA \
+        --checkpoint_path /n/rush_lab/jc/onmt/models/$name/$name.lr1.clip5_acc_61.34_ppl_8.39_e13.pt \
+        --modelname $name \
+        --savepath $SAVE/$name \
+        --devid $1
 }

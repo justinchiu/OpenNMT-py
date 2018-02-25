@@ -111,6 +111,9 @@ def model_opts(parser):
     parser.add_argument('-add_word_vectors_phrase', action="store_true",
                         help="""Add word vectors to output of encoder,
                         need repeated phrase encoder.""")
+    parser.add_argument('-add_position_vectors_phrase', action="store_true",
+                        help="""Add word vectors to output of encoder,
+                        need repeated phrase encoder.""")
 
     # Genenerator and loss options.
     parser.add_argument('-copy_attn', action="store_true",
