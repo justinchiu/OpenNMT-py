@@ -157,7 +157,7 @@ class Trainer(object):
                     len(self.model.generator[0].vertices) + self.model.generator[0].phrase_lut.word_vocab_size)
                 self.train_loss.criterion.weight.fill_(1)
                 self.train_loss.criterion.weight[self.train_loss.padding_idx] = 0
-                batch.tgt.copy_(ctgt_outer.squeeze(2)) # ? lol...
+                batch.tgt.data.copy_(ctgt_outer.squeeze(2).data) # ? lol...
             # end mods
 
             report_stats.n_src_words += src_lengths.sum()

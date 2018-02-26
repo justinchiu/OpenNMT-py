@@ -124,6 +124,8 @@ def model_opts(parser):
                         help='Train a coverage attention layer.')
     parser.add_argument('-lambda_coverage', type=float, default=1,
                         help='Lambda value for coverage.')
+    parser.add_argument('-use_phrase_acc', action="store_true",
+                        help='Train copy attention layer.')
 
 
 def preprocess_opts(parser):

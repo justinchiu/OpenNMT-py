@@ -451,12 +451,23 @@ train_phrase_word_natural_nodistill() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
+generate_phrase_word_natural_nodistill() {
+    #-model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill/phrase.word.natural.nodistill.lr1.clip5_acc_42.02_ppl_47.73_e13.pt \
+    python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
+        -model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill2/phrase.word.natural.nodistill2.lr1.clip5_acc_41.84_ppl_48.18_e13.pt \
+        -gpu 1 \
+        -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
+        -output /n/rush_lab/jc/onmt/gen/phrase.word.natural.nodistill2.test.en \
+        -beam_size 5
+}
+
 train_phrase_word_natural_nodistill_pacc() {
     seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
     #name=phrase.word.natural.nodistill
     name=phrase.word.natural.nodistill.pacc.s$seed
     python /n/home13/jchiu/projects/OpenNMT-py/train.py \
         -encoder_type brnn \
+        -use_phrase_acc \
         -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
         -seed $seed \
         -gpuid $1 \
@@ -467,14 +478,33 @@ train_phrase_word_natural_nodistill_pacc() {
         | tee ${LOG}/$name.lr1.clip5.log
 }
 
-generate_phrase_word_natural_nodistill() {
-    #-model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill/phrase.word.natural.nodistill.lr1.clip5_acc_42.02_ppl_47.73_e13.pt \
+generate_phrase_word_natural_nodistill_pacc() {
+    name=phrase.word.natural.nodistill.pacc.s104
     python /n/home13/jchiu/projects/OpenNMT-py/translate.py \
-        -model /n/rush_lab/jc/onmt/models/phrase.word.natural.nodistill2/phrase.word.natural.nodistill2.lr1.clip5_acc_41.84_ppl_48.18_e13.pt \
-        -gpu 1 \
+        -model $MODEL/$name/$name.lr1.clip5_acc_34.08_ppl_49.50_e16.pt \
+        -gpu $1 \
         -src /n/holylfs/LABS/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/test.de \
-        -output /n/rush_lab/jc/onmt/gen/phrase.word.natural.nodistill2.test.en \
+        -output $GEN/$name.test.en \
         -beam_size 5
+}
+
+train_phrase_word_scnatural_nodistill_pacc() {
+    seed=$(od -A n -t d -N 1 /dev/urandom |tr -d ' ')
+    name=phrase.word.scnatural.nodistill.pacc.s$seed
+    python /n/home13/jchiu/projects/OpenNMT-py/train.py \
+        -encoder_type brnn \
+        -use_phrase_acc \
+        -data $PHRASEDATA_WORD_NATURAL_NODISTILL \
+        -tgt_phrase_mappings /n/rush_lab/data/iwslt14-de-en/data/iwslt14.tokenized.phrase.de-en/phrase.natural.natural.tgt.pkl \
+        -unigram_vocab /n/rush_lab/data/iwslt14-de-en/data-onmt/iwslt14.tokenized.de-en.3-3.vocab.pt \
+        -tgt_distractors 2048 \
+        -seed $seed \
+        -gpuid $1 \
+        -learning_rate 1 \
+        -max_grad_norm 5 \
+        -epochs 25 \
+        -save_model $MODEL/$name/$name.lr1.clip5 \
+        | tee ${LOG}/$name.lr1.clip5.log
 }
 
 # Repeat Corpus

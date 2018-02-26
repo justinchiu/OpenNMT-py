@@ -28,11 +28,11 @@ class PhrasePolytope(nn.Module):
     def prepare_projection(self, target, n):
         """ Sets the phrase vertices of the softmax projection polytope """
         mask = target.ge(self.nuni)
-        phrases = set(target[mask].tolist())
+        phrases = set(target[mask].data.tolist())
         distractors = self.get_distractors(n, self.perm, phrases)
         self.vertices = sorted(list(phrases | distractors))
         self.v2i = {v: i for i, v in enumerate(self.vertices)}
-        self.vertT = target.new(self.vertices).view(-1, 1, 1)
+        self.vertT = V(target.data.new(self.vertices).view(-1, 1, 1))
 
     def get_distractors(self, n, perm, phrases):
         """ Get a set of distractors """
@@ -48,10 +48,10 @@ class PhrasePolytope(nn.Module):
     def collapse_target(self, target):
         """ Collapse Target """
         self.prepare_projection(target, self.n)
-        self.target = target.new(list(map(
+        self.target = V(target.data.new(list(map(
             lambda x: self.v2i[x] + self.nuni if x > self.nuni else x,
             target.data.view(-1).tolist()
-        ))).view_as(target)
+        )))).view_as(target)
         return self.target
 
     def forward(self, input):

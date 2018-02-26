@@ -126,6 +126,8 @@ def make_loss_compute(model, tgt_vocab, dataset, opt):
     if opt.copy_attn:
         compute = onmt.modules.CopyGeneratorLossCompute(
             model.generator, tgt_vocab, dataset, opt.copy_attn_force)
+    elif opt.use_phrase_acc:
+        compute = onmt.Loss.NmtPhraseLossCompute(model.generator, tgt_vocab)
     else:
         compute = onmt.Loss.NMTLossCompute(model.generator, tgt_vocab)
 

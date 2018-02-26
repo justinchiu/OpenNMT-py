@@ -87,11 +87,11 @@ class LossComputeBase(nn.Module):
         count_weights = self.word_counts.index_select(0, target)
         pred = scores.max(1)[1]
         non_padding = target.ne(self.padding_idx)
-        #count_weights = non_padding.new(non_padding.size()).fill_(1)
-        num_correct = ((pred.eq(target) * count_weights)
-                          .masked_select(non_padding)
-                          .sum())
-        return onmt.Statistics(loss[0], non_padding.sum(), num_correct, (non_padding * count_weights).sum())
+
+        num_correct = pred.eq(target) \
+                          .masked_select(non_padding) \
+                          .sum()
+        return onmt.Statistics(loss[0], non_padding.sum(), num_correct)
 
     def bottle(self, v):
         return v.view(-1, v.size(2))
@@ -189,3 +189,21 @@ def shards(state, shard_size, eval=False):
                      if isinstance(v, Variable) and v.grad is not None)
         inputs, grads = zip(*variables)
         torch.autograd.backward(inputs, grads)
+
+class NmtPhraseLossCompute(NMTLossCompute):
+    def stats(self, loss, scores, target):
+        """
+        Compute and return a Statistics object.
+
+        Args:
+            loss(Tensor): the loss computed by the loss criterion.
+            scores(Tensor): a sequence of predict output with scores.
+        """
+        count_weights = self.word_counts.index_select(0, target)
+        pred = scores.max(1)[1]
+        non_padding = target.ne(self.padding_idx)
+        #count_weights = non_padding.new(non_padding.size()).fill_(1)
+        num_correct = ((pred.eq(target) * count_weights)
+                          .masked_select(non_padding)
+                          .sum())
+        return onmt.Statistics(loss[0], non_padding.sum(), num_correct, (non_padding * count_weights).sum())

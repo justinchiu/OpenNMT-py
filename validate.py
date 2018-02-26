@@ -216,7 +216,7 @@ def visualize_attn():
         wordnll = wordnlls[i]
 
         rownames = list(example.tgt) + ["<eos>"]
-        rownames = ["[{}] {}".format(i, name) for i, name in enumerate(rownames)]
+        rownames = ["[{}] {} ({:.2f})".format(i, name, wordnll[i].data[0]) for i, name in enumerate(rownames)]
         columnnames = list(example.src)
         columnnames = ["[{}] {}".format(i, name) for i, name in enumerate(columnnames)]
         title = "Model {} Example {}".format(args.checkpoint_path.split("/")[-2], i)
@@ -238,4 +238,6 @@ def visualize_attn():
         )
 
 
-visualize_attn()
+#visualize_attn()
+
+import pdb; pdb.set_trace()
