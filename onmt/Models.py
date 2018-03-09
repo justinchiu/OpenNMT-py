@@ -107,6 +107,7 @@ class RNNEncoder(EncoderBase):
             # context_gate, but modified
             p = F.sigmoid(self.proj(outputs + emb))
             outputs = (1-p) * outputs + p * emb
+            self.p = p
 
         return hidden_t, outputs
 

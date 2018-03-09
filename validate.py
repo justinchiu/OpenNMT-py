@@ -239,5 +239,10 @@ def visualize_attn():
 
 
 #visualize_attn()
-
+idx = 2357
+example = valid[idx]
+srcfield = fields["src"]
+tgtfield = fields["tgt"]
+x = srcfield.numericalize(srcfield.pad([example.src]), device=devid, train=False)
+y = tgtfield.numericalize(tgtfield.pad([example.tgt]), device=devid, train=False)
 import pdb; pdb.set_trace()
