@@ -10,7 +10,8 @@ import onmt.io
 import onmt.Models
 import onmt.modules
 from onmt.Models import NMTModel, MeanEncoder, RNNEncoder, \
-                        StdRNNDecoder, InputFeedRNNDecoder
+                        StdRNNDecoder, InputFeedRNNDecoder, \
+                        VanillaRNNDecoder
 from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
                          CNNEncoder, CNNDecoder, AudioEncoder
@@ -102,6 +103,15 @@ def make_decoder(opt, embeddings):
                                    opt.dropout,
                                    embeddings,
                                    opt.reuse_copy_attn)
+    elif opt.decoder_type == "vanillarnn":
+        return VanillaRNNDecoder(
+            rnn_type              = opt.rnn_type,
+            bidirectional_encoder = opt.brnn,
+            num_layers            = opt.dec_layers,
+            hidden_size           = opt.rnn_size,
+            attn_type             = "none",
+            dropout               = opt.dropout,
+            embeddings            = embeddings)
     else:
         return StdRNNDecoder(opt.rnn_type, opt.brnn,
                              opt.dec_layers, opt.rnn_size,

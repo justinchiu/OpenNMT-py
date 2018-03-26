@@ -56,7 +56,7 @@ def model_opts(parser):
                        are experimental. Options are
                        [rnn|brnn|mean|transformer|cnn].""")
     group.add_argument('-decoder_type', type=str, default='rnn',
-                       choices=['rnn', 'transformer', 'cnn'],
+                       choices=['rnn', 'transformer', 'cnn', 'vanillarnn'],
                        help="""Type of decoder layer to use. Non-RNN layers
                        are experimental. Options are
                        [rnn|transformer|cnn].""")
@@ -81,7 +81,7 @@ def model_opts(parser):
                        help="""Have an additional layer between the last encoder
                        state and the first decoder state""")
     group.add_argument('-rnn_type', type=str, default='LSTM',
-                       choices=['LSTM', 'GRU', 'SRU'],
+                       choices=['LSTM', 'GRU', 'SRU', 'RNN'],
                        action=CheckSRU,
                        help="""The gate type to use in the RNNs""")
     # group.add_argument('-residual',   action="store_true",

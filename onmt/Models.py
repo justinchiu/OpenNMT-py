@@ -267,10 +267,11 @@ class RNNDecoderBase(nn.Module):
 
         # Set up the standard attention.
         self._coverage = coverage_attn
-        self.attn = onmt.modules.GlobalAttention(
-            hidden_size, coverage=coverage_attn,
-            attn_type=attn_type
-        )
+        if attn_type != "none":
+            self.attn = onmt.modules.GlobalAttention(
+                hidden_size, coverage=coverage_attn,
+                attn_type=attn_type
+            )
 
         # Set up a separated copy attention layer, if needed.
         self._copy = False
@@ -386,7 +387,7 @@ class StdRNNDecoder(RNNDecoderBase):
         emb = self.embeddings(tgt)
 
         # Run the forward pass of the RNN.
-        if isinstance(self.rnn, nn.GRU):
+        if isinstance(self.rnn, nn.GRU) or isinstance(self.rnn, nn.RNN):
             rnn_output, decoder_final = self.rnn(emb, state.hidden[0])
         else:
             rnn_output, decoder_final = self.rnn(emb, state.hidden)
@@ -429,6 +430,21 @@ class StdRNNDecoder(RNNDecoderBase):
         Private helper returning the number of expected features.
         """
         return self.embeddings.embedding_size
+
+
+class VanillaRNNDecoder(StdRNNDecoder):
+    """
+    Stuff!
+    """
+    def _run_forward_pass(self, tgt, memory_bank, state, memory_lengths=None):
+        # Ignore everything except tgt and state
+        emb = self.embeddings(tgt)
+        if isinstance(self.rnn, nn.GRU) or isinstance(self.rnn, nn.RNN):
+            rnn_output, decoder_final = self.rnn(emb, state.hidden[0])
+        else:
+            rnn_output, decoder_final = self.rnn(emb, state.hidden)
+        decoder_outputs = self.dropout(rnn_output)
+        return decoder_final, decoder_outputs, {}
 
 
 class InputFeedRNNDecoder(RNNDecoderBase):
