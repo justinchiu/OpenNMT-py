@@ -57,3 +57,28 @@ class StackedGRU(nn.Module):
 
         h_1 = torch.stack(h_1)
         return input, (h_1,)
+
+
+class StackedRNN(nn.Module):
+
+    def __init__(self, cell, num_layers, input_size, rnn_size, dropout, nonlinearity="relu"):
+        super(StackedRNN, self).__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.num_layers = num_layers
+        self.layers = nn.ModuleList()
+
+        for i in range(num_layers):
+            self.layers.append(cell(input_size, rnn_size, nonlinearity=nonlinearity))
+            input_size = rnn_size
+
+    def forward(self, input, hidden):
+        h_1 = []
+        for i, layer in enumerate(self.layers):
+            h_1_i = layer(input, hidden[0][i])
+            input = h_1_i
+            if i + 1 != self.num_layers:
+                input = self.dropout(input)
+            h_1 += [h_1_i]
+
+        h_1 = torch.stack(h_1)
+        return input, (h_1,)

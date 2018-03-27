@@ -14,6 +14,7 @@ import sys
 import math
 import torch
 import torch.nn as nn
+import numpy as np
 
 import onmt
 import onmt.io
@@ -318,3 +319,78 @@ class Trainer(object):
 
         if self.grad_accum_count > 1:
             self.optim.step()
+
+
+    def prune_(self, prune_percentile):
+        for name, p in self.model.named_parameters():
+            if "rnn.weight" in name:
+                weights = p.abs().data
+                thresh = np.percentile(weights.cpu().numpy(), prune_percentile)
+                mask = weights.new(p.size()).cuda().fill_(thresh).gt(weights)
+                p.data.masked_fill_(mask, 0)
+
+
+    def train_prune(self, train_iter, epoch, prune_percentile, report_func=None):
+        """ Train next epoch.
+        Args:
+            train_iter: training data iterator
+            epoch(int): the epoch number
+            report_func(fn): function for logging
+
+        Returns:
+            stats (:obj:`onmt.Statistics`): epoch loss statistics
+        """
+        total_stats = Statistics()
+        report_stats = Statistics()
+        idx = 0
+        true_batchs = []
+        accum = 0
+        normalization = 0
+        try:
+            add_on = 0
+            if len(train_iter) % self.grad_accum_count > 0:
+                add_on += 1
+            num_batches = len(train_iter) / self.grad_accum_count + add_on
+        except NotImplementedError:
+            # Dynamic batching
+            num_batches = -1
+
+        for i, batch in enumerate(train_iter):
+            cur_dataset = train_iter.get_cur_dataset()
+            self.train_loss.cur_dataset = cur_dataset
+
+            true_batchs.append(batch)
+            accum += 1
+            if self.norm_method == "tokens":
+                num_tokens = batch.tgt[1:].data.view(-1) \
+                    .ne(self.train_loss.padding_idx).sum()
+                normalization += num_tokens
+            else:
+                normalization += batch.batch_size
+
+            if accum == self.grad_accum_count:
+                self._gradient_accumulation(
+                        true_batchs, total_stats,
+                        report_stats, normalization)
+
+                if report_func is not None:
+                    report_stats = report_func(
+                            epoch, idx, num_batches,
+                            total_stats.start_time, self.optim.lr,
+                            report_stats)
+
+                true_batchs = []
+                accum = 0
+                normalization = 0
+                idx += 1
+                self.prune_(prune_percentile)
+
+        if len(true_batchs) > 0:
+            # what?
+            self._gradient_accumulation(
+                    true_batchs, total_stats,
+                    report_stats, normalization)
+            self.prune_(prune_percentile)
+            true_batchs = []
+
+        return total_stats

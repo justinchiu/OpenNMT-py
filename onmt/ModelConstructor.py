@@ -11,7 +11,7 @@ import onmt.Models
 import onmt.modules
 from onmt.Models import NMTModel, MeanEncoder, RNNEncoder, \
                         StdRNNDecoder, InputFeedRNNDecoder, \
-                        VanillaRNNDecoder
+                        VanillaRNNDecoder, TDRNNDecoder
 from onmt.modules import Embeddings, ImageEncoder, CopyGenerator, \
                          TransformerEncoder, TransformerDecoder, \
                          CNNEncoder, CNNDecoder, AudioEncoder
@@ -74,7 +74,7 @@ def make_encoder(opt, embeddings):
         # "rnn" or "brnn"
         return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
                           opt.rnn_size, opt.dropout, embeddings,
-                          opt.bridge)
+                          opt.bridge, opt.rnn_nonlinearity)
 
 
 def make_decoder(opt, embeddings):
@@ -93,6 +93,26 @@ def make_decoder(opt, embeddings):
                           opt.global_attention, opt.copy_attn,
                           opt.cnn_kernel_width, opt.dropout,
                           embeddings)
+    elif opt.decoder_type == "vanillarnn":
+        return VanillaRNNDecoder(
+            rnn_type              = opt.rnn_type,
+            bidirectional_encoder = opt.brnn,
+            num_layers            = opt.dec_layers,
+            hidden_size           = opt.rnn_size,
+            attn_type             = "none",
+            dropout               = opt.dropout,
+            embeddings            = embeddings,
+            nonlinearity          = opt.rnn_nonlinearity)
+    elif opt.decoder_type == "tdrnn":
+        return TDRNNDecoder(
+            rnn_type              = opt.rnn_type,
+            bidirectional_encoder = opt.brnn,
+            num_layers            = opt.dec_layers,
+            hidden_size           = opt.rnn_size,
+            attn_type             = "none",
+            dropout               = opt.dropout,
+            embeddings            = embeddings,
+            nonlinearity          = opt.rnn_nonlinearity)
     elif opt.input_feed:
         return InputFeedRNNDecoder(opt.rnn_type, opt.brnn,
                                    opt.dec_layers, opt.rnn_size,
@@ -102,16 +122,8 @@ def make_decoder(opt, embeddings):
                                    opt.copy_attn,
                                    opt.dropout,
                                    embeddings,
-                                   opt.reuse_copy_attn)
-    elif opt.decoder_type == "vanillarnn":
-        return VanillaRNNDecoder(
-            rnn_type              = opt.rnn_type,
-            bidirectional_encoder = opt.brnn,
-            num_layers            = opt.dec_layers,
-            hidden_size           = opt.rnn_size,
-            attn_type             = "none",
-            dropout               = opt.dropout,
-            embeddings            = embeddings)
+                                   opt.reuse_copy_attn,
+                                   opt.rnn_nonlinearity)
     else:
         return StdRNNDecoder(opt.rnn_type, opt.brnn,
                              opt.dec_layers, opt.rnn_size,
@@ -121,7 +133,8 @@ def make_decoder(opt, embeddings):
                              opt.copy_attn,
                              opt.dropout,
                              embeddings,
-                             opt.reuse_copy_attn)
+                             opt.reuse_copy_attn,
+                             opt.rnn_nonlinearity)
 
 
 def load_test_model(opt, dummy_opt):

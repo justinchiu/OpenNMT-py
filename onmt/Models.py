@@ -7,6 +7,8 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
+import math
+
 import onmt
 from onmt.Utils import aeq
 
@@ -18,8 +20,22 @@ def rnn_factory(rnn_type, **kwargs):
         # SRU doesn't support PackedSequence.
         no_pack_padded_seq = True
         rnn = onmt.modules.SRU(**kwargs)
+    if rnn_type == "GRU" or rnn_type == "LSTM":
+        del kwargs["nonlinearity"]
+        rnn = getattr(nn, rnn_type)(**kwargs)
     else:
         rnn = getattr(nn, rnn_type)(**kwargs)
+    if rnn_type == "RNN" and kwargs["nonlinearity"] == "relu":
+        # initialize weight
+        for name, x in rnn.named_parameters():
+            if "weight_hh" in name:
+                x.data.copy_(torch.eye(*x.size()))
+            elif "weight_ih" in name:
+                nn.init.xavier_uniform(x.data, gain=nn.init.calculate_gain("relu"))
+                # fucking around with init, remove when actually running?
+                x.data *= 0.01
+            elif "bias" in name:
+                x.data.uniform_(-0.01, 0.01)
     return rnn, no_pack_padded_seq
 
 
@@ -108,7 +124,7 @@ class RNNEncoder(EncoderBase):
     """
     def __init__(self, rnn_type, bidirectional, num_layers,
                  hidden_size, dropout=0.0, embeddings=None,
-                 use_bridge=False):
+                 use_bridge=False, nonlinearity=None):
         super(RNNEncoder, self).__init__()
         assert embeddings is not None
 
@@ -123,7 +139,8 @@ class RNNEncoder(EncoderBase):
                         hidden_size=hidden_size,
                         num_layers=num_layers,
                         dropout=dropout,
-                        bidirectional=bidirectional)
+                        bidirectional=bidirectional,
+                        nonlinearity=nonlinearity)
 
         # Initialize the bridge layer
         self.use_bridge = use_bridge
@@ -239,7 +256,7 @@ class RNNDecoderBase(nn.Module):
                  hidden_size, attn_type="general",
                  coverage_attn=False, context_gate=None,
                  copy_attn=False, dropout=0.0, embeddings=None,
-                 reuse_copy_attn=False):
+                 reuse_copy_attn=False, nonlinearity=None):
         super(RNNDecoderBase, self).__init__()
 
         # Basic attributes.
@@ -255,7 +272,8 @@ class RNNDecoderBase(nn.Module):
                                    input_size=self._input_size,
                                    hidden_size=hidden_size,
                                    num_layers=num_layers,
-                                   dropout=dropout)
+                                   dropout=dropout,
+                                   nonlinearity=nonlinearity)
 
         # Set up the context gate.
         self.context_gate = None
@@ -446,6 +464,21 @@ class VanillaRNNDecoder(StdRNNDecoder):
         decoder_outputs = self.dropout(rnn_output)
         return decoder_final, decoder_outputs, {}
 
+class TDRNNDecoder(StdRNNDecoder):
+    """
+    Stuff!
+    """
+    def _run_forward_pass(self, tgt, memory_bank, state, memory_lengths=None):
+        # Ignore everything except tgt and state
+        emb = self.embeddings(tgt)
+        import pdb; pdb.set_trace()
+        if isinstance(self.rnn, nn.GRU) or isinstance(self.rnn, nn.RNN):
+            rnn_output, decoder_final = self.rnn(emb, state.hidden[0])
+        else:
+            rnn_output, decoder_final = self.rnn(emb, state.hidden)
+        decoder_outputs = self.dropout(rnn_output)
+        return decoder_final, decoder_outputs, {}
+
 
 class InputFeedRNNDecoder(RNNDecoderBase):
     """
@@ -541,11 +574,19 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         return hidden, decoder_outputs, attns
 
     def _build_rnn(self, rnn_type, input_size,
-                   hidden_size, num_layers, dropout):
+                   hidden_size, num_layers, dropout, nonlinearity=None):
         assert not rnn_type == "SRU", "SRU doesn't support input feed! " \
                 "Please set -input_feed 0!"
         if rnn_type == "LSTM":
             stacked_cell = onmt.modules.StackedLSTM
+        elif rnn_type == "RNN":
+            return onmt.modules.StackedRNN(
+                cell=getattr(nn, rnn_type + "Cell"),
+                num_layers=num_layers,
+                input_size=input_size,
+                rnn_size=hidden_size,
+                dropout=dropout,
+                nonlinearity=nonlinearity)
         else:
             stacked_cell = onmt.modules.StackedGRU
         return stacked_cell(num_layers, input_size,
