@@ -12,6 +12,69 @@ import math
 import onmt
 from onmt.Utils import aeq
 
+#{'input_size': 800, 'hidden_size': 400, 'num_layers': 2, 'dropout': 0.3, 'bidirectional': True, 'nonlinearity': 'relu'}
+class RnnLol(nn.Module):
+    def __init__(self, rnn_type, input_size, hidden_size, num_layers, dropout, bidirectional, nonlinearity):
+        super(RnnLol, self).__init__()
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.bidirectional = bidirectional
+        self.nonlinearity = nonlinearity
+
+        self.rnns = [
+            getattr(nn, rnn_type)(
+                input_size = input_size,
+                hidden_size = hidden_size * 2,
+                num_layers = 1,
+                dropout = 0,
+                bidirectional = bidirectional,
+                nonlinearity = nonlinearity
+            )
+        ]
+        for _ in range(num_layers-1):
+            self.rnns.append(
+                getattr(nn, rnn_type)(
+                    input_size = hidden_size * 2,
+                    hidden_size = hidden_size * 2,
+                    num_layers = 1,
+                    dropout = 0,
+                    bidirectional = bidirectional,
+                    nonlinearity = nonlinearity
+                )
+            )
+        self.rnns = nn.ModuleList(self.rnns)
+
+    # i guess state will be a list of states.
+    def forward(self, input, state):
+        stuff, ls = unpack(input)
+        state_out = []
+        for i, rnn in enumerate(self.rnns):
+            stuff, state_out_i = rnn(
+                F.dropout(stuff, self.dropout, self.training),
+                None if state is None else state[i]
+            )
+            state_out.append(state_out_i)
+            if self.bidirectional:
+                stuff = stuff.narrow(-1, 0, 800) + stuff.narrow(-1, 800, 800)
+        return pack(stuff, ls), torch.cat(state_out, 0)
+
+
+def rnn_factory_lol(rnn_type, **kwargs):
+    # Use pytorch version when available.
+    no_pack_padded_seq = False
+    if rnn_type == "SRU":
+        # SRU doesn't support PackedSequence.
+        no_pack_padded_seq = True
+        rnn = onmt.modules.SRU(**kwargs)
+    if rnn_type == "GRU" or rnn_type == "LSTM":
+        del kwargs["nonlinearity"]
+        rnn = getattr(nn, rnn_type)(**kwargs)
+    else:
+        rnn = RnnLol(rnn_type, **kwargs)
+    return rnn, no_pack_padded_seq
 
 def rnn_factory(rnn_type, **kwargs):
     # Use pytorch version when available.
@@ -24,9 +87,9 @@ def rnn_factory(rnn_type, **kwargs):
         del kwargs["nonlinearity"]
         rnn = getattr(nn, rnn_type)(**kwargs)
     else:
+        # normal rnn shit
         rnn = getattr(nn, rnn_type)(**kwargs)
     return rnn, no_pack_padded_seq
-
 
 class EncoderBase(nn.Module):
     """
@@ -123,7 +186,7 @@ class RNNEncoder(EncoderBase):
         self.embeddings = embeddings
 
         self.rnn, self.no_pack_padded_seq = \
-            rnn_factory(rnn_type,
+            rnn_factory_lol(rnn_type,
                         input_size=embeddings.embedding_size,
                         hidden_size=hidden_size,
                         num_layers=num_layers,
@@ -339,7 +402,8 @@ class RNNDecoderBase(nn.Module):
             # The encoder hidden is  (layers*directions) x batch x dim.
             # We need to convert it to layers x batch x (directions*dim).
             if self.bidirectional_encoder:
-                h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
+                #h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
+                h = h[0:h.size(0):2] + h[1:h.size(0):2]
             return h
 
         if isinstance(encoder_final, tuple):  # LSTM

@@ -341,50 +341,94 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
     valid_iter = list(valid_iter)
     save_file = "/n/rush_lab/jc/hardware/iwslt14-de-en/vectors"
     
-
     # layer 0
     ib_file = "{}/{}".format(save_file, "input_bias_l0")
     np.savetxt(
         ib_file,
-        model.encoder.rnn.bias_ih_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[0].bias_ih_l0.data.cpu().numpy()
     )
     hb_file = "{}/{}".format(save_file, "hidden_bias_l0")
     np.savetxt(
         hb_file,
-        model.encoder.rnn.bias_hh_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[0].bias_hh_l0.data.cpu().numpy()
     )
     iw_file = "{}/{}".format(save_file, "input_weight_l0")
     np.savetxt(
         iw_file,
-        model.encoder.rnn.weight_ih_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[0].weight_ih_l0.data.cpu().numpy()
     )
     hw_file = "{}/{}".format(save_file, "hidden_weight_l0")
     np.savetxt(
         hw_file,
-        model.encoder.rnn.weight_hh_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[0].weight_hh_l0.data.cpu().numpy()
+    )
+
+    # layer 0b
+    ib_file = "{}/{}".format(save_file, "input_bias_l0b")
+    np.savetxt(
+        ib_file,
+        model.encoder.rnn.rnns[0].bias_ih_l0_reverse.data.cpu().numpy()
+    )
+    hb_file = "{}/{}".format(save_file, "hidden_bias_l0b")
+    np.savetxt(
+        hb_file,
+        model.encoder.rnn.rnns[0].bias_hh_l0_reverse.data.cpu().numpy()
+    )
+    iw_file = "{}/{}".format(save_file, "input_weight_l0b")
+    np.savetxt(
+        iw_file,
+        model.encoder.rnn.rnns[0].weight_ih_l0_reverse.data.cpu().numpy()
+    )
+    hw_file = "{}/{}".format(save_file, "hidden_weight_l0b")
+    np.savetxt(
+        hw_file,
+        model.encoder.rnn.rnns[0].weight_hh_l0_reverse.data.cpu().numpy()
     )
 
     # layer 1
     ib_file = "{}/{}".format(save_file, "input_bias_l1")
     np.savetxt(
         ib_file,
-        model.encoder.rnn.bias_ih_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[1].bias_ih_l0.data.cpu().numpy()
     )
     hb_file = "{}/{}".format(save_file, "hidden_bias_l1")
     np.savetxt(
         hb_file,
-        model.encoder.rnn.bias_hh_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[1].bias_hh_l0.data.cpu().numpy()
     )
     iw_file = "{}/{}".format(save_file, "input_weight_l1")
     np.savetxt(
         iw_file,
-        model.encoder.rnn.weight_ih_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[1].weight_ih_l0.data.cpu().numpy()
     )
     hw_file = "{}/{}".format(save_file, "hidden_weight_l1")
     np.savetxt(
         hw_file,
-        model.encoder.rnn.weight_hh_l0.data.cpu().numpy()
+        model.encoder.rnn.rnns[1].weight_hh_l0.data.cpu().numpy()
     )
+
+    # layer 1b
+    ib_file = "{}/{}".format(save_file, "input_bias_l1b")
+    np.savetxt(
+        ib_file,
+        model.encoder.rnn.rnns[1].bias_ih_l0_reverse.data.cpu().numpy()
+    )
+    hb_file = "{}/{}".format(save_file, "hidden_bias_l1b")
+    np.savetxt(
+        hb_file,
+        model.encoder.rnn.rnns[1].bias_hh_l0_reverse.data.cpu().numpy()
+    )
+    iw_file = "{}/{}".format(save_file, "input_weight_l1b")
+    np.savetxt(
+        iw_file,
+        model.encoder.rnn.rnns[1].weight_ih_l0_reverse.data.cpu().numpy()
+    )
+    hw_file = "{}/{}".format(save_file, "hidden_weight_l1b")
+    np.savetxt(
+        hw_file,
+        model.encoder.rnn.rnns[1].weight_hh_l0_reverse.data.cpu().numpy()
+    )
+
 
     for i, batch in enumerate(valid_iter):
         embs = model.encoder.embeddings(
@@ -392,9 +436,9 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
         )
         embs_np = embs.data.squeeze().cpu().numpy()
 
-        encoder_rnn = model.encoder.rnn
+        encoder_rnn = model.encoder.rnn.rnns[0]
 
-        # forward
+        # forward l0
         forward_input_int = []
         forward_hidden_int = []
         forward_output = []
@@ -409,7 +453,7 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
             forward_output.append(relu_quantize(
                 F.relu(forward_input_int[t] + forward_hidden_int[t]), opt.qh_i, opt.qh_f))
 
-        # backward
+        # backward l0b
         backward_input_int = []
         backward_hidden_int = []
         backward_output = []
@@ -434,7 +478,52 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
             vec_file = "{}/{}_{}_{}_l0".format(save_file, "output", i, t)
             np.savetxt(vec_file, forward_output[t].data.squeeze().cpu().numpy())
 
-        if i > 100:
+        # layer 2
+        embs = relu_quantize(torch.cat(forward_output, 0) + torch.cat(backward_output, 0), opt.qh_i, opt.qh_f)
+        embs_np = embs.data.squeeze().cpu().numpy()
+        encoder_rnn = model.encoder.rnn.rnns[1]
+
+        # forward l1
+        forward_input_int = []
+        forward_hidden_int = []
+        forward_output = []
+        for t in range(batch.src[0].size(0)):
+            forward_input_int.append(F.linear(
+                embs[t], encoder_rnn.weight_ih_l0, encoder_rnn.bias_ih_l0))
+            if t == 0:
+                forward_hidden_int.append(encoder_rnn.bias_hh_l0)
+            else:
+                forward_hidden_int.append(F.linear(
+                    forward_output[-1], encoder_rnn.weight_hh_l0, encoder_rnn.bias_hh_l0))
+            forward_output.append(relu_quantize(
+                F.relu(forward_input_int[t] + forward_hidden_int[t]), opt.qh_i, opt.qh_f))
+
+        # backward l1b
+        backward_input_int = []
+        backward_hidden_int = []
+        backward_output = []
+        for t in range(batch.src[0].size(0))[::-1]:
+            backward_input_int.insert(0, F.linear(
+                embs[t], encoder_rnn.weight_ih_l0, encoder_rnn.bias_ih_l0))
+            if t == batch.src[0].size(0)-1:
+                backward_hidden_int.insert(0, encoder_rnn.bias_hh_l0)
+            else:
+                backward_hidden_int.insert(0, F.linear(
+                    backward_output[-1], encoder_rnn.weight_hh_l0, encoder_rnn.bias_hh_l0))
+            backward_output.insert(0, relu_quantize(
+                F.relu(backward_input_int[0] + backward_hidden_int[0]), opt.qh_i, opt.qh_f))
+
+        for t in range(batch.src[0].size(0)):
+            vec_file = "{}/{}_{}_{}_l1".format(save_file, "input", i, t)
+            np.savetxt(vec_file, embs_np[t])
+            vec_file = "{}/{}_{}_{}_l1".format(save_file, "input_int", i, t)
+            np.savetxt(vec_file, forward_input_int[t].data.squeeze().cpu().numpy())
+            vec_file = "{}/{}_{}_{}_l1".format(save_file, "hidden_int", i, t)
+            np.savetxt(vec_file, forward_hidden_int[t].data.squeeze().cpu().numpy())
+            vec_file = "{}/{}_{}_{}_l1".format(save_file, "output", i, t)
+            np.savetxt(vec_file, forward_output[t].data.squeeze().cpu().numpy())
+
+        if i > 10:
             break
 
     valid_stats = trainer.validate(valid_iter)
