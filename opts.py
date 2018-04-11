@@ -328,7 +328,7 @@ def train_opts(parser):
                        Set to zero to turn off label smoothing.
                        For more detailed information, see:
                        https://arxiv.org/abs/1512.00567""")
-    group.add_argument('-prune_threshold', type=float, default=0.7,
+    group.add_argument('-prune_threshold', type=float, default=70,
                        help="""Prune weights during training.
                        """)
 

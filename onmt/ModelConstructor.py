@@ -240,6 +240,11 @@ def make_base_model(model_opt, fields, gpu, checkpoint=None):
             for p in generator.parameters():
                 if p.dim() > 1:
                     xavier_uniform(p)
+        if model_opt.rnn_type == "RNN" and model_opt.rnn_nonlinearity == "relu":
+            # initialize weight
+            for name, x in model.named_parameters():
+                if "weight_hh" in name:
+                    x.data.copy_(0.1 * torch.eye(*x.size()))
 
         if hasattr(model.encoder, 'embeddings'):
             model.encoder.embeddings.load_pretrained_vectors(

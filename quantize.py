@@ -8,9 +8,12 @@ import os
 import sys
 import random
 
+import numpy as np
+
 import torch
 import torch.nn as nn
 from torch import cuda
+import torch.nn.functional as F
 
 import onmt
 import onmt.io
@@ -20,6 +23,7 @@ import onmt.modules
 from onmt.Utils import use_gpu
 import opts
 
+
 parser = argparse.ArgumentParser(
     description='prune.py',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -28,6 +32,20 @@ parser = argparse.ArgumentParser(
 opts.add_md_help_argument(parser)
 opts.model_opts(parser)
 opts.train_opts(parser)
+
+parser.add_argument("--n-test-vectors", type=int, default=10000)
+
+parser.add_argument('--qw_i', default=2, help='Maximum number of fraction bits for inputs', type=int)
+parser.add_argument('--qw_f', default=8, help='Maximum number of fraction bits for inputs ', type=int)
+
+parser.add_argument('--min_weight', default=-1.0, type=float, help='Clamp weight to minimum value (used for sparse quantization)')
+parser.add_argument('--max_weight', default= 1.0, type=float, help='Clamp weight to maximum value (used for sparse quantization)')
+
+parser.add_argument('--qh_i', default=8, help='Maximum number of integer bits for hidden state', type=int)
+parser.add_argument('--qh_f', default=8, help='Maximum number of fraction bits for hidden state', type=int)
+
+parser.add_argument('--qi_i', default=8, help='Maximum number of fraction bits for inputs', type=int)
+parser.add_argument('--qi_f', default=8, help='Maximum number of fraction bits for inputs', type=int)
 
 opt = parser.parse_args()
 if opt.word_vec_size != -1:
@@ -74,6 +92,74 @@ if opt.tensorboard:
     from tensorboardX import SummaryWriter
     writer = SummaryWriter(opt.tensorboard_log_dir, comment="Onmt")
 
+
+# QUANTIZATION
+
+
+# not relevant unless in-between layers
+def relu_quantize(x, qi, qf):
+    fmax = 1. - float(torch.pow(2., torch.FloatTensor([-1. * qf])).numpy()[0])
+    imax = float((torch.pow(2., torch.FloatTensor([qi])) - 1).numpy()[0])
+    fdiv = float(torch.pow(2., torch.FloatTensor([-qf])).numpy()[0])
+    x = torch.floor ( x / fdiv) * fdiv
+    return x.clamp(0, imax + fmax)
+
+def quantize_(x, qi, qf):
+    fmax = 1. - float(torch.pow(2., torch.FloatTensor([-1. * qf])).numpy()[0])
+    imax =      float((torch.pow(2., torch.FloatTensor([qi-1])) - 1).numpy()[0])
+    imin = -1 * float((torch.pow(2., torch.FloatTensor([qi-1]))).numpy()[0])
+    fdiv = float(torch.pow(2., torch.FloatTensor([-qf])).numpy()[0])
+    x = torch.floor ( x / fdiv) * fdiv
+    return torch.clamp(x, imin, imax + fmax)
+
+def quantize_sparse_weights(x, qi, qf):
+    pos_weights_mask   = torch.gt(x, 0)
+    pos_weights_values = torch.masked_select(x, pos_weights_mask)
+
+    pos_min = pos_weights_values.min()
+    pos_max = pos_weights_values.max()
+
+    pos_weights = x * pos_weights_mask.float()
+    pos_weights = pos_weights - pos_min
+    new_max = pos_weights.max()
+    pos_weights = torch.div ( pos_weights, new_max )
+    pos_weights = pos_weights * pos_weights_mask.float()
+
+    pos_weights = quantize_(pos_weights, qi, qf)
+    pos_weights = torch.mul(pos_weights , new_max)
+    pos_weights = pos_weights + pos_min
+    pos_weights = pos_weights * pos_weights_mask.float()
+
+    return pos_weights
+
+def weight_quantize_(
+    parameter,
+    min_weight=opt.min_weight,
+    max_weight=opt.max_weight,
+    qw_i=opt.qw_i,
+    qw_f=opt.qw_f
+):
+    weight = parameter.data
+    weight.clamp_(min_weight, max_weight)
+
+    # Positive quantization
+    pos_weights = quantize_sparse_weights(weight, qw_i, qw_f)
+
+    # Negative Quantization
+    neg_weights_mask = torch.lt(weight, 0)
+    neg_weights = (weight * neg_weights_mask.float()).abs()
+    neg_weights = quantize_sparse_weights(neg_weights, qw_i, qw_f) * -1
+
+    new_weights = pos_weights + neg_weights
+    parameter.data = new_weights
+
+def quantize_model_(model):
+    for name, p in model.named_parameters():
+        if "rnn.weight" in name or "lut" in name:
+            weight_quantize_(p)
+
+def forward(model, input, state=None):
+    encoder_rnn = model.encoder.rnn
 
 def report_func(epoch, batch, num_batches,
                 start_time, lr, report_stats):
@@ -215,7 +301,6 @@ def make_loss_compute(model, tgt_vocab, opt, train=True):
 
     return compute
 
-
 def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
     train_loss = make_loss_compute(model, fields["tgt"].vocab, opt)
     valid_loss = make_loss_compute(model, fields["tgt"].vocab, opt,
@@ -230,6 +315,8 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
                            trunc_size, shard_size, data_type,
                            norm_method, grad_accum_count)
 
+
+    """
     print('\nStart training...')
     print(' * number of epochs: %d, starting from Epoch %d' %
           (opt.epochs + 1 - opt.start_epoch, opt.start_epoch))
@@ -241,19 +328,120 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
         # 1. Train for one epoch on the training set.
         train_iter = make_dataset_iter(lazily_load_dataset("train"),
                                        fields, opt)
-        train_stats = trainer.train_prune(
-            train_iter, epoch, prune_schedule[epoch], report_func)
+        #train_stats = trainer.train_prune(
+            #train_iter, epoch, prune_schedule[epoch], report_func)
         print('Train perplexity: %g' % train_stats.ppl())
         print('Train accuracy: %g' % train_stats.accuracy())
+    """
 
-        # 2. Validate on the validation set.
-        valid_iter = make_dataset_iter(lazily_load_dataset("valid"),
-                                       fields, opt,
-                                       is_train=False)
-        valid_stats = trainer.validate(valid_iter)
-        print('Validation perplexity: %g' % valid_stats.ppl())
-        print('Validation accuracy: %g' % valid_stats.accuracy())
+    # 2. Validate on the validation set.
+    valid_iter = make_dataset_iter(lazily_load_dataset("valid"),
+                                   fields, opt,
+                                   is_train=False)
+    valid_iter = list(valid_iter)
+    save_file = "/n/rush_lab/jc/hardware/iwslt14-de-en/vectors"
+    
 
+    # layer 0
+    ib_file = "{}/{}".format(save_file, "input_bias_l0")
+    np.savetxt(
+        ib_file,
+        model.encoder.rnn.bias_ih_l0.data.cpu().numpy()
+    )
+    hb_file = "{}/{}".format(save_file, "hidden_bias_l0")
+    np.savetxt(
+        hb_file,
+        model.encoder.rnn.bias_hh_l0.data.cpu().numpy()
+    )
+    iw_file = "{}/{}".format(save_file, "input_weight_l0")
+    np.savetxt(
+        iw_file,
+        model.encoder.rnn.weight_ih_l0.data.cpu().numpy()
+    )
+    hw_file = "{}/{}".format(save_file, "hidden_weight_l0")
+    np.savetxt(
+        hw_file,
+        model.encoder.rnn.weight_hh_l0.data.cpu().numpy()
+    )
+
+    # layer 1
+    ib_file = "{}/{}".format(save_file, "input_bias_l1")
+    np.savetxt(
+        ib_file,
+        model.encoder.rnn.bias_ih_l0.data.cpu().numpy()
+    )
+    hb_file = "{}/{}".format(save_file, "hidden_bias_l1")
+    np.savetxt(
+        hb_file,
+        model.encoder.rnn.bias_hh_l0.data.cpu().numpy()
+    )
+    iw_file = "{}/{}".format(save_file, "input_weight_l1")
+    np.savetxt(
+        iw_file,
+        model.encoder.rnn.weight_ih_l0.data.cpu().numpy()
+    )
+    hw_file = "{}/{}".format(save_file, "hidden_weight_l1")
+    np.savetxt(
+        hw_file,
+        model.encoder.rnn.weight_hh_l0.data.cpu().numpy()
+    )
+
+    for i, batch in enumerate(valid_iter):
+        embs = model.encoder.embeddings(
+            batch.src[0].view(-1, 1, 1)
+        )
+        embs_np = embs.data.squeeze().cpu().numpy()
+
+        encoder_rnn = model.encoder.rnn
+
+        # forward
+        forward_input_int = []
+        forward_hidden_int = []
+        forward_output = []
+        for t in range(batch.src[0].size(0)):
+            forward_input_int.append(F.linear(
+                embs[t], encoder_rnn.weight_ih_l0, encoder_rnn.bias_ih_l0))
+            if t == 0:
+                forward_hidden_int.append(encoder_rnn.bias_hh_l0)
+            else:
+                forward_hidden_int.append(F.linear(
+                    forward_output[-1], encoder_rnn.weight_hh_l0, encoder_rnn.bias_hh_l0))
+            forward_output.append(relu_quantize(
+                F.relu(forward_input_int[t] + forward_hidden_int[t]), opt.qh_i, opt.qh_f))
+
+        # backward
+        backward_input_int = []
+        backward_hidden_int = []
+        backward_output = []
+        for t in range(batch.src[0].size(0))[::-1]:
+            backward_input_int.insert(0, F.linear(
+                embs[t], encoder_rnn.weight_ih_l0, encoder_rnn.bias_ih_l0))
+            if t == batch.src[0].size(0)-1:
+                backward_hidden_int.insert(0, encoder_rnn.bias_hh_l0)
+            else:
+                backward_hidden_int.insert(0, F.linear(
+                    backward_output[-1], encoder_rnn.weight_hh_l0, encoder_rnn.bias_hh_l0))
+            backward_output.insert(0, relu_quantize(
+                F.relu(backward_input_int[0] + backward_hidden_int[0]), opt.qh_i, opt.qh_f))
+
+        for t in range(batch.src[0].size(0)):
+            vec_file = "{}/{}_{}_{}_l0".format(save_file, "input", i, t)
+            np.savetxt(vec_file, embs_np[t])
+            vec_file = "{}/{}_{}_{}_l0".format(save_file, "input_int", i, t)
+            np.savetxt(vec_file, forward_input_int[t].data.squeeze().cpu().numpy())
+            vec_file = "{}/{}_{}_{}_l0".format(save_file, "hidden_int", i, t)
+            np.savetxt(vec_file, forward_hidden_int[t].data.squeeze().cpu().numpy())
+            vec_file = "{}/{}_{}_{}_l0".format(save_file, "output", i, t)
+            np.savetxt(vec_file, forward_output[t].data.squeeze().cpu().numpy())
+
+        if i > 100:
+            break
+
+    valid_stats = trainer.validate(valid_iter)
+    print('Validation perplexity: %g' % valid_stats.ppl())
+    print('Validation accuracy: %g' % valid_stats.accuracy())
+
+    """
         # 3. Log to remote server.
         if opt.exp_host:
             train_stats.log("train", experiment, optim.lr)
@@ -268,6 +456,7 @@ def train_model(model, fields, optim, data_type, model_opt, prune_schedule):
         # 5. Drop a checkpoint if needed.
         if epoch >= opt.start_checkpoint_at:
             trainer.drop_checkpoint(model_opt, epoch, fields, valid_stats)
+            """
 
 
 def check_save_model_path():
@@ -401,6 +590,7 @@ def main():
         checkpoint["opt"].learning_rate = opt.learning_rate
         checkpoint["opt"].learning_rate_decay = opt.learning_rate_decay
         model_opt.save_model = opt.save_model
+        model_opt.valid_batch_size = opt.valid_batch_size
     else:
         checkpoint = None
         model_opt = opt
@@ -424,6 +614,8 @@ def main():
     # Build optimizer.
     optim = build_optim(model, checkpoint)
 
+    # Don't retrain because of pruning?
+    """
     end_prune_epoch   = int(0.8 * (opt.epochs - opt.start_epoch)) + opt.start_epoch
     ramp_epochs = end_prune_epoch+1 - opt.start_epoch
 
@@ -434,9 +626,11 @@ def main():
     for e in range(end_prune_epoch, opt.epochs+1):
         prune_schedule[e] = opt.prune_threshold
     print(prune_schedule)
+    """
     # Do training.
-    train_model(model, fields, optim, data_type, model_opt, prune_schedule)
-
+    quantize_model_(model)
+    # Hacked to just output val perf, but intermediate steps aren't quantized
+    train_model(model, fields, optim, data_type, model_opt, None)
     # If using tensorboard for logging, close the writer after training.
     if opt.tensorboard:
         writer.close()

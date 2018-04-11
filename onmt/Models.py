@@ -25,17 +25,6 @@ def rnn_factory(rnn_type, **kwargs):
         rnn = getattr(nn, rnn_type)(**kwargs)
     else:
         rnn = getattr(nn, rnn_type)(**kwargs)
-    if rnn_type == "RNN" and kwargs["nonlinearity"] == "relu":
-        # initialize weight
-        for name, x in rnn.named_parameters():
-            if "weight_hh" in name:
-                x.data.copy_(torch.eye(*x.size()))
-            elif "weight_ih" in name:
-                nn.init.xavier_uniform(x.data, gain=nn.init.calculate_gain("relu"))
-                # fucking around with init, remove when actually running?
-                x.data *= 0.01
-            elif "bias" in name:
-                x.data.uniform_(-0.01, 0.01)
     return rnn, no_pack_padded_seq
 
 
@@ -410,6 +399,9 @@ class StdRNNDecoder(RNNDecoderBase):
         else:
             rnn_output, decoder_final = self.rnn(emb, state.hidden)
 
+        import numpy as np
+        if np.any(np.isnan(rnn_output.cpu().data.numpy())):
+            import pdb; pdb.set_trace()
         # Check
         tgt_len, tgt_batch, _ = tgt.size()
         output_len, output_batch, _ = rnn_output.size()
