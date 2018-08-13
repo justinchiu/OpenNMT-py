@@ -133,7 +133,7 @@ def preprocess_opts(parser):
     group = parser.add_argument_group('Data')
     group.add_argument('-data_type', default="text",
                        help="""Type of the source input.
-                       Options are [text|img].""")
+                       Options are [text|img|sam].""")
 
     group.add_argument('-train_src', required=True,
                        help="Path to the training source data")

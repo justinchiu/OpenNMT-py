@@ -203,6 +203,11 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
                 TextDataset.make_text_examples_nfeats_tpl(
                     src_data_iter, src_path, src_seq_length_trunc, "src")
 
+        elif data_type == 'sam':
+            src_examples_iter, num_src_feats = \
+                SamDataset.make_data_examples_nfeats_tpl(
+                    src_data_iter, src_path, src_dir)
+
         elif data_type == 'img':
             src_examples_iter, num_src_feats = \
                 ImageDataset.make_image_examples_nfeats_tpl(
