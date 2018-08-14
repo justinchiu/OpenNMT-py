@@ -13,6 +13,7 @@ import torchtext.vocab
 
 from onmt.inputters.dataset_base import UNK_WORD, PAD_WORD, BOS_WORD, EOS_WORD
 from onmt.inputters.text_dataset import TextDataset
+from onmt.inputters.sam_dataset import SamDataset
 from onmt.inputters.image_dataset import ImageDataset
 from onmt.inputters.audio_dataset import AudioDataset
 from onmt.utils.logging import logger
@@ -46,6 +47,8 @@ def get_fields(data_type, n_src_features, n_tgt_features):
     """
     if data_type == 'text':
         return TextDataset.get_fields(n_src_features, n_tgt_features)
+    elif data_type == 'sam':
+        return SamDataset.get_fields(n_src_features, n_tgt_features)
     elif data_type == 'img':
         return ImageDataset.get_fields(n_src_features, n_tgt_features)
     elif data_type == 'audio':
@@ -114,6 +117,8 @@ def get_num_features(data_type, corpus_file, side):
 
     if data_type == 'text':
         return TextDataset.get_num_features(corpus_file, side)
+    if data_type == 'sam':
+        return SamDataset.get_num_features(corpus_file, side)
     elif data_type == 'img':
         return ImageDataset.get_num_features(corpus_file, side)
     elif data_type == 'audio':
@@ -206,7 +211,7 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
         elif data_type == 'sam':
             src_examples_iter, num_src_feats = \
                 SamDataset.make_data_examples_nfeats_tpl(
-                    src_data_iter, src_path, src_dir)
+                    src_data_iter, src_path, src_dir, "src")
 
         elif data_type == 'img':
             src_examples_iter, num_src_feats = \
@@ -235,9 +240,14 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
                                   window, normalize_audio)
 
     # For all data types, the tgt side corpus is in form of text.
-    tgt_examples_iter, num_tgt_feats = \
+    # Except that for Sam's data it's already in json...
+    tgt_examples_iter, num_tgt_feats = (
         TextDataset.make_text_examples_nfeats_tpl(
             tgt_data_iter, tgt_path, tgt_seq_length_trunc, "tgt")
+        if data_type != "sam" else
+        SamDataset.make_data_examples_nfeats_tpl(
+            tgt_data_iter, tgt_path, tgt_seq_length_trunc, "tgt")
+    )
 
     if data_type == 'text':
         dataset = TextDataset(fields, src_examples_iter, tgt_examples_iter,
@@ -246,6 +256,16 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
                               tgt_seq_length=tgt_seq_length,
                               dynamic_dict=dynamic_dict,
                               use_filter_pred=use_filter_pred)
+
+    elif data_type == 'sam':
+        dataset = SamDataset(
+            fields,
+            src_examples_iter = src_examples_iter,
+            tgt_examples_iter = tgt_examples_iter,
+            num_tgt_feats = num_tgt_feats,
+            tgt_seq_length = tgt_seq_length,
+            dynamic_dict = dynamic_dict, #?
+            use_filter_pred = use_filter_pred)
 
     elif data_type == 'img':
         dataset = ImageDataset(fields, src_examples_iter, tgt_examples_iter,
@@ -310,7 +330,13 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
         for ex in dataset.examples:
             for k in fields:
                 val = getattr(ex, k, None)
-                if val is not None and not fields[k].sequential:
+                if k == "src" and data_type == "sam":
+                    val = [
+                        x
+                        for relation in val
+                        for x in [relation.e, relation.t, relation.v]
+                    ]
+                elif val is not None and not fields[k].sequential:
                     val = [val]
                 elif k == 'src' and src_vocab:
                     val = [item for item in val if item in src_vocab]
@@ -354,6 +380,12 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
                 vocab_size=src_vocab_size)
             fields["src"].vocab = merged_vocab
             fields["tgt"].vocab = merged_vocab
+    elif data_type == "sam":
+        _build_field_vocab(fields["src"], counter["src"],
+                           max_size=src_vocab_size,
+                           min_freq=src_words_min_frequency)
+        logger.info(" * src vocab size: %d." % len(fields["src"].vocab))
+
 
     return fields
 

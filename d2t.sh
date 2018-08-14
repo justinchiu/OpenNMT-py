@@ -1,18 +1,24 @@
 # rotowire (smaller)
-text=/n/rush_lab/jc/code/data2text/boxscore-data/rotowire
+if [ -n "$odyssey" ]; then
+    text=/n/rush_lab/jc/code/data2text/boxscore-data/rotowire
+else
+    text=/home/justinchiu/research/data2text/boxscore-data/rotowire
+fi
 # train.json valid.json test.json
-data=data/rotowire
+data=data/rotowire/roto
 
 preprocess_rw() {
     mkdir -p data/rotowire
     python preprocess.py \
-        -train_json ${text}/train.json \
-        -valid_json ${text}/valid.json \
+        -train_src ${text}/train.json \
+        -valid_src ${text}/valid.json \
+        -train_tgt ${text}/train.json \
+        -valid_tgt ${text}/valid.json \
         -data_type sam \
-        -vocab_size 80000 \
-        -min_frequency 0 \
-        -seq_length 1000 \
-        -save_data $DATA
+        -tgt_vocab_size 80000 \
+        -tgt_words_min_frequency 0 \
+        -tgt_seq_length 1000 \
+        -save_data $data
 }
 
 train_rw_soft() {
@@ -21,7 +27,7 @@ train_rw_soft() {
     name=model_soft
     gpuid=0
     python train.py \
-        -data $DATA \
+        -data $data \
         -save_model $name -gpuid $gpuid -seed $seed \
         -src_word_vec_size 512 \
         -tgt_word_vec_size 512 \

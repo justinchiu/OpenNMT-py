@@ -202,6 +202,7 @@ def main():
 
     logger.info("Building & saving vocabulary...")
     build_save_vocab(train_dataset_files, fields, opt)
+    import pdb; pdb.set_trace()
 
     logger.info("Building & saving validation data...")
     build_save_dataset('valid', fields, opt)

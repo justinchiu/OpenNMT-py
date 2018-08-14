@@ -6,6 +6,9 @@ from itertools import chain
 import io
 import codecs
 import sys
+import json
+
+from typing import NamedTuple
 
 import torch
 import torchtext
@@ -14,9 +17,15 @@ from onmt.inputters.dataset_base import (DatasetBase, UNK_WORD,
                                          PAD_WORD, BOS_WORD, EOS_WORD)
 from onmt.utils.misc import aeq
 
+class Relation(NamedTuple):
+    t: str  # type
+    e: str  # entity (ent)
+    v: str  # value
+    h: bool # home or away
+
 
 class SamDataset(DatasetBase):
-    """ Dataset for data_type=='text'
+    """ Dataset for data_type=='sam'
 
         Build `Example` objects, `Field` objects, and filter_pred function
         from text corpus.
@@ -39,7 +48,7 @@ class SamDataset(DatasetBase):
 
     def __init__(self, fields, src_examples_iter, tgt_examples_iter,
                  num_src_feats=0, num_tgt_feats=0,
-                 src_seq_length=0, tgt_seq_length=0,
+                 tgt_seq_length=0,
                  dynamic_dict=True, use_filter_pred=True):
         self.data_type = 'text'
 
@@ -79,19 +88,19 @@ class SamDataset(DatasetBase):
         for ex_values in example_values:
             example = self._construct_example_fromlist(
                 ex_values, out_fields)
-            src_size += len(example.src)
+            #src_size += len(example.src)
             out_examples.append(example)
 
         def filter_pred(example):
             """ ? """
-            return 0 < len(example.src) <= src_seq_length \
-                and 0 < len(example.tgt) <= tgt_seq_length
+            return 0 < len(example.tgt) <= tgt_seq_length
 
         filter_pred = filter_pred if use_filter_pred else lambda x: True
 
-        super(TextDataset, self).__init__(
+        super(SamDataset, self).__init__(
             out_examples, out_fields, filter_pred
         )
+
 
     def sort_key(self, ex):
         """ Sort using length of source sentences. """
@@ -129,7 +138,7 @@ class SamDataset(DatasetBase):
         return scores
 
     @staticmethod
-    def make_text_examples_nfeats_tpl(text_iter, text_path, truncate, side):
+    def make_data_examples_nfeats_tpl(data_iter, data_path, truncate, side):
         """
         Args:
             text_iter(iterator): an iterator (or None) that we can loop over
@@ -144,17 +153,20 @@ class SamDataset(DatasetBase):
             (example_dict iterator, num_feats) tuple.
         """
         assert side in ['src', 'tgt']
-
-        if text_iter is None:
-            if text_path is not None:
-                text_iter = TextDataset.make_text_iterator_from_file(text_path)
+        if data_iter is None:
+            if data_path is not None:
+                data_iter = SamDataset.make_data_iterator_from_file(data_path)
             else:
                 return (None, 0)
 
-        # All examples have same number of features, so we peek first one
-        # to get the num_feats.
-        examples_nfeats_iter = \
-            TextDataset.make_examples(text_iter, truncate, side)
+        if side == "tgt":
+            # lol
+            examples_nfeats_iter = SamDataset.make_text(data_iter, truncate, side)
+        else:
+            # All examples have same number of features, so we peek first one
+            # to get the num_feats.
+            examples_nfeats_iter = \
+                SamDataset.make_examples(data_iter, truncate, side)
 
         first_ex = next(examples_nfeats_iter)
         num_feats = first_ex[1]
@@ -176,20 +188,88 @@ class SamDataset(DatasetBase):
         Yields:
             (word, features, nfeat) triples for each line.
         """
-        for i, line in enumerate(text_iter):
-            line = line.strip().split()
-            if truncate:
-                line = line[:truncate]
-
-            words, feats, n_feats = \
-                TextDataset.extract_text_features(line)
-
-            example_dict = {side: words, "indices": i}
+        n_feats = 0 # we have entity e, type t, and value v???
+        for i, x in enumerate(text_iter):
+            # x.keys() = dict_keys([
+            #   'home_name', 'box_score', 'home_city', 'vis_name', 'summary',
+            #   'vis_line', 'vis_city', 'day', 'home_line'])
+            # Relations will be (t, e, m)? or just make a named tuple lol
+            relations = []
+            # proper_nouns have the same entity and value
+            home = x["home_name"]
+            vis = x["vis_name"]
+            relations.append(Relation(
+                e = home,
+                t = "name",
+                v = home,
+                h = True,
+            ))
+            relations.append(Relation(
+                e = vis,
+                t = "name",
+                v = vis,
+                h = False,
+            ))
+            # city
+            home_city = x["home_city"]
+            vis_city = x["vis_city"]
+            relations.append(Relation(
+                e = home,
+                t = "city",
+                v = home_city,
+                h = True,
+            ))
+            relations.append(Relation(
+                e = vis,
+                t = "city",
+                v = vis_city,
+                h = False,
+            ))
+            # lines
+            def add_line(e, line):
+                for t, v in line.items():
+                    relations.append(Relation(
+                        e = e,
+                        t = t,
+                        v = v,
+                        h = "home" in e,
+                    ))
+            add_line(home, x["home_line"])
+            add_line(vis, x["vis_line"])
+            # player names
+            id2name = x["box_score"]["PLAYER_NAME"]
+            id2city = x["box_score"]["TEAM_CITY"]
+            # box_score
+            for t, id2v in x["box_score"].items():
+                for id, v in id2v.items():
+                    relations.append(Relation(
+                        e = id2name[id],
+                        t = t,
+                        v = v,
+                        h = id2city[id] == x["home_city"],
+                    ))
+            example_dict = {
+                "src": relations,
+                "indices": i,
+            }
+            """
+            import pdb; pdb.set_trace()
             if feats:
                 prefix = side + "_feat_"
                 example_dict.update((prefix + str(j), f)
                                     for j, f in enumerate(feats))
+            """
             yield example_dict, n_feats
+
+    @staticmethod
+    def make_text(text_iter, truncate, side):
+        for i, x in enumerate(text_iter):
+            yield {side: x["summary"], "indices": i}, 0
+
+    @staticmethod
+    def make_data_iterator_from_file(path):
+        with codecs.open(path, "r") as corpus_file:
+            return json.loads(corpus_file.read())
 
     @staticmethod
     def make_text_iterator_from_file(path):
@@ -212,10 +292,16 @@ class SamDataset(DatasetBase):
         """
         fields = {}
 
+        """
         fields["src"] = torchtext.data.Field(
             pad_token=PAD_WORD,
             include_lengths=True)
+        """
+        fields["src"] = torchtext.data.Field(
+            sequential=False,
+        )
 
+        # is this necessary...?
         for j in range(n_src_features):
             fields["src_feat_" + str(j)] = \
                 torchtext.data.Field(pad_token=PAD_WORD)
@@ -230,7 +316,7 @@ class SamDataset(DatasetBase):
                                      pad_token=PAD_WORD)
 
         def make_src(data, vocab):
-            """ ? """
+            """ Hm, maybe I use this for getting pointer information??? """
             src_size = max([t.size(0) for t in data])
             src_vocab_size = max([t.max() for t in data]) + 1
             alignment = torch.zeros(src_size, len(data), src_vocab_size)
@@ -239,10 +325,12 @@ class SamDataset(DatasetBase):
                     alignment[j, i, t] = 1
             return alignment
 
+        # For copying...IE?
         fields["src_map"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.float,
             postprocessing=make_src, sequential=False)
 
+        # Also for pointer information
         def make_tgt(data, vocab):
             """ ? """
             tgt_size = max([t.size(0) for t in data])
@@ -251,10 +339,12 @@ class SamDataset(DatasetBase):
                 alignment[:sent.size(0), i] = sent
             return alignment
 
+        # more pointer information
         fields["alignment"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.long,
             postprocessing=make_tgt, sequential=False)
 
+        # Pointer back to original example index
         fields["indices"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.long,
             sequential=False)
@@ -276,10 +366,18 @@ class SamDataset(DatasetBase):
         Returns:
             number of features on `side`.
         """
-        with codecs.open(corpus_file, "r", "utf-8") as cf:
-            f_line = cf.readline().strip().split()
-            _, _, num_feats = TextDataset.extract_text_features(f_line)
-
+        if side == "src":
+            num_feats = 0
+            # lol...?
+        else:
+            # Only tokens on target side
+            num_feats = 0
+            """
+            with codecs.open(corpus_file, "r", "utf-8") as cf:
+                stuff = json.loads(cf)
+                f_line = cf.readline().strip().split()
+                _, _, num_feats = SamDataset.extract_text_features(f_line)
+            """
         return num_feats
 
     # Below are helper functions for intra-class use only.
