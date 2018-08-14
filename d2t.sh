@@ -9,6 +9,10 @@ data=data/rotowire/roto
 
 preprocess_rw() {
     mkdir -p data/rotowire
+    # TODO(justinchiu): need to figure out
+    # workaround for dynamic_dict and share_vocab
+    # since we don't want to share the vocab (do we?) and
+    # the copying vocab is constant (and not dynamic)
     python preprocess.py \
         -train_src ${text}/train.json \
         -valid_src ${text}/valid.json \

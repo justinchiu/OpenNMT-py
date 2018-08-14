@@ -325,12 +325,12 @@ class SamDataset(DatasetBase):
                     alignment[j, i, t] = 1
             return alignment
 
-        # For copying...IE?
+        # TODO(justinchiu): For copying...IE? 
         fields["src_map"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.float,
             postprocessing=make_src, sequential=False)
 
-        # Also for pointer information
+        # TODO(justinchiu): Also for pointer information 
         def make_tgt(data, vocab):
             """ ? """
             tgt_size = max([t.size(0) for t in data])
@@ -339,7 +339,7 @@ class SamDataset(DatasetBase):
                 alignment[:sent.size(0), i] = sent
             return alignment
 
-        # more pointer information
+        # TODO(justinchiu): more pointer information
         fields["alignment"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.long,
             postprocessing=make_tgt, sequential=False)
