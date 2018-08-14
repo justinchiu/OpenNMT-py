@@ -101,6 +101,16 @@ class SamDataset(DatasetBase):
             out_examples, out_fields, filter_pred
         )
 
+        self.bs_keys = ["PLAYER_NAME", "START_POSITION", "MIN", "PTS",
+            "FGM", "FGA", "FG_PCT", "FG3M", "FG3A",
+            "FG3_PCT", "FTM", "FTA", "FT_PCT", "OREB",
+            "DREB", "REB", "AST", "TO", "STL", "BLK",
+            "PF", "FIRST_NAME", "SECOND_NAME"]
+
+        self.ls_keys = ["TEAM-PTS_QTR1", "TEAM-PTS_QTR2", "TEAM-PTS_QTR3", "TEAM-PTS_QTR4",
+            "TEAM-PTS", "TEAM-FG_PCT", "TEAM-FG3_PCT", "TEAM-FT_PCT", "TEAM-REB",
+            "TEAM-AST", "TEAM-TOV", "TEAM-WINS", "TEAM-LOSSES", "TEAM-CITY", "TEAM-NAME"]
+
 
     def sort_key(self, ex):
         """ Sort using length of source sentences. """
