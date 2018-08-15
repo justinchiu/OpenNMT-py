@@ -1,0 +1,209 @@
+\documentclass{article}
+
+\usepackage[margin=1in]{geometry}
+
+% ToC
+\usepackage{blindtext} 
+\usepackage[linktocpage]{hyperref}
+\usepackage{bookmark}
+\usepackage{titlesec}
+
+% bib
+\usepackage[round]{natbib}
+
+% Math Imports
+\usepackage{amsmath, amssymb, bm, fancyhdr, sectsty, dsfont, mathtools}
+
+% Tikz
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+
+\usepackage{wrapfig}
+\usepackage{comment}
+\usepackage{subcaption}
+
+% Symbols
+\newcommand\ind{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+\newcommand\norm[1]{\left\lVert#1\right\rVert}
+\newcommand\set[1]{\left\{#1\right\}}
+
+\newcommand\RNN{\mathrm{RNN}}
+\newcommand\MLP{\mathrm{MLP}}
+\newcommand\enc{\mathrm{enc}}
+\newcommand\softmax{\mathrm{softmax}}
+
+% Distributions
+\newcommand{\Cat}{\mathrm{Cat}}
+\newcommand\Expo{\mathrm{Expo}}
+\newcommand\Bern{\mathrm{Bern}}
+\newcommand\Pois{\mathrm{Pois}}
+\newcommand\Bin{\mathrm{Bin}}
+\newcommand\Unif{\mathrm{Unif}}
+\newcommand\Betad{\mathrm{Beta}}
+\newcommand\Gammad{\mathrm{Gamma}}
+\newcommand\Geom{\mathrm{Geom}}
+\newcommand\Logd{\mathrm{Logistic}}
+
+\newcommand\E[1]{\mathbb{E}\left[#1\right]}
+\newcommand\Es[2]{\mathbb{E}_{#1}\left[#2\right]}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\Cor}{\mathrm{Cor}}
+
+% Bold stuff
+\newcommand{\ba}{\mathbf{a}}
+\newcommand{\bb}{\mathbf{b}}
+\newcommand{\bc}{\mathbf{c}}
+\newcommand{\bd}{\mathbf{d}}
+\newcommand{\be}{\mathbf{e}}
+\newcommand{\bg}{\mathbf{g}}
+\newcommand{\bh}{\mathbf{h}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\bz}{\mathbf{z}}
+
+% mathcal stuff
+\newcommand{\mcD}{\mathcal{D}}
+
+% math blackboard bold stuff
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+
+
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+
+\title{Latent Data to Document}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\section{Problem}
+We would like to learn a generative model
+over sentences $\bx = \{x_0, x_1, \ldots\}$ as well as distribution over latent tables $\bz$.  
+We are primarily interested in the respective conditional distributions:
+both the posterior distribution over tables given a sentence $p(\bz\mid\bx)$,
+which is an information extraction model,
+as well as the conditional distribution over summaries $p(\bx\mid\bx)$.
+
+
+\section{Data to Document}
+The conditional copy model in \citet{wiseman2017d2t}
+
+\subsection{The Model}
+Let $x_t$ be the current token, $\bx_{0:t-1}$ all previous tokens, $z_t$ the prediction for the current score,
+and $\tilde{\bz}_{0:t-1}\in\R^{t-1}_+$ be all previous scores.
+The model takes the form a language model, where
+the distribution over the next token
+$$p(x_t\mid \bx_{0:t-1}, \tilde{\bz}_{0:t-1},z_t) = f([h_{l_t:t-1},h_t])$$
+is parameterized by either a linear projection or additional residual blocks
+applied to a concatenation of the output of modified LSTMN (LSTM Memory-Network) $h_t$
+and a convex combination of the previous LSTMN outputs (i.e. attention over $h_{l_t:t-1}$).
+$f$ is referred to as the Predict Network.
+
+\subsubsection{LSTMN}
+\label{subsec:lstmn}
+The LSTMN, referred to as the Reading Network, is as follows:
+at each time step, the hidden and cell input are given by
+$$\{\tilde{h}_t,\tilde{c}_t\} = \sum_{i=1}^{t-1} s_i^t\{h_i,c_i\},$$
+a convex combination of the previous hidden and cell outputs.
+Then $$h_t,c_t = \texttt{LSTM}(\tilde{h}_t,\tilde{c}_t).$$
+The attention is computed in the same way as detailed in section~\ref{subsec:attn}.
+The input to the LSTMN module is either the previous token or the
+output of a previous LSTMN layer.
+
+\subsubsection{Attention}
+\label{subsec:attn}
+As all attention modules in the PRPN network use the same formulation of attention we will use 
+$y$ to refer to the input of the attention module, $\bm{g}$ the gate coefficients,
+$\bm{m}$ as the memories to attend over, and $\bm{s}$ as the attention coefficients.
+First the key is computed using a linear projection of the input $k = W_ky$.
+Then the intermediate scores are computed
+$$\tilde{s}_i = \textrm{softmax}\left(\frac{m_ik^T}{\sqrt{\delta_k}}\right),$$
+where $\delta_k$ is the dimension of the hidden state.
+Finally, the gate coefficients are normalized and used to prevent the attention from
+extending too far in the past.
+$$s_i = \frac{g_i}{\sum_jg_j}\tilde{s_i},$$
+where the gate coefficients $\bm{g}$ are detailed in section~\ref{subsec:gates}.
+
+\subsubsection{Gating Self-attention}
+\label{subsec:gates}
+Recall that the gates $g_i^t$ used modulate self-attention also indirectly induce tree structure
+(due to the previously stated insight that modulating self-attention
+using a ranking induces a binary tree).
+At every timestep for token $x_t$,
+\citet{shen2018prpn} define a latent variable $l_t$ which corresponds to the index of the 
+token satisfying either condition (a) or (b).
+We then would have $$g_i^t = \left\{\begin{array}{lr}
+1, & l_t \le i < t\\
+0, & \textrm{otherwise.}
+\end{array}\right.$$
+where we allow the model at timestep $t$ to only attend up to the token at $l_t$.
+We then renormalize the attention accordingly.
+In order to calculate the gates $g_i^t$ we must model $p(l_t\mid\bx_{0:t})$ 
+(\citet{shen2018prpn} use the posterior distribution in their notation).
+They propose to model 
+$$p(l_t=i\mid\bx_{0:t-1})=(1-\alpha_i^t)\prod_{j=i+1}^{t-1}\alpha_j^t$$
+using a stick-breaking process.
+Rather than resorting to approximate inference, they instead use the expected value of $g_i^t$
+$$\E{g_i^t} = F_{l_t}(l_t \le i\mid\bx_{0:t-1}) = \prod_{j=i+1}^{t-1}\alpha_j^t.$$
+The $\alpha_j^t = \sigma(d_t - d_j)$, where $\sigma$ is the hard sigmoid function.
+This is not stated in the paper (there are a couple off-by-one) errors,
+but it must be that $g_{t-1}^t = 1$.
+The $d_j\in\R_+$ are given by a CNN over the token embeddings.
+
+The network used to compute the gates is called the Parsing Network.
+When computing $p(x_t\mid\ldots)$, we cannot use the posterior score $d_t$,
+so an estimate is used based on the previous $k$ words, where $k$ is the 
+kernel width of the convolution.
+However, afterwards \citet{shen2018prpn} use the posterior score $d_i \mid x_{i-K},\ldots, x_i$
+for all $d_i$ when $i < t$.
+
+\begin{comment}
+\section{Comparison to CCM \citep{klein-2002-ccm}}
+\citep{klein-2002-ccm2}
+\citep{golland-2012-ccm,huang-2012-ccm}
+\section{Comparison to StructVae \citep{yin18structvae}}
+Hm, if we generated context given span, would that encourage non-constituents?
+General question about segmental models.
+\end{comment}
+
+\section{Related Work}
+
+\section{Alternative Latent Ranking Model}
+\subsection{Generative Model}
+PRPN \citep{shen2018prpn} choose to view $l_t$ as a latent variable.
+There are at least a few other choices:
+\begin{itemize}
+\item Model the scores $d_t \sim \mathcal{N}(\mu_t,\sigma_t)$
+or $d_t \sim \textrm{Gamma}$
+and use the Plackett-Luce ranking distribution.
+\item Model the comparisons $p(d_t < d_i)$ as order statistics of Gammas.
+\item Model the permutation matrix $Z \sim \mathcal{B}_n$.
+\item Model $l_t\sim \textrm{Cat}$.
+\end{itemize}
+Parameterize with $d_t\sim\mathcal{N}(\mu_t, \sigma_t)$.
+Reparameterize comparisons with gumbel softmax?
+Leave all self attentions as is?
+\begin{itemize}
+\item $p(z)$
+\item $p(x|z)$
+\end{itemize}
+
+\section{Training and Inference}
+
+for next time, convince Sasha of why this is interesting.
+Also go over stick breaking process.
+
+\bibliographystyle{plainnat}
+\bibliography{w}
+
+\end{document}
+
