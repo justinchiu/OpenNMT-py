@@ -148,7 +148,7 @@ class SamDataset(DatasetBase):
         return scores
 
     @staticmethod
-    def make_data_examples_nfeats_tpl(data_iter, data_path, truncate, side):
+    def make_data_examples_nfeats_tpl(data_iter, data_path, truncate, side, ptr_iter=None, ptr_path=None):
         """
         Args:
             text_iter(iterator): an iterator (or None) that we can loop over
@@ -168,6 +168,9 @@ class SamDataset(DatasetBase):
                 data_iter = SamDataset.make_data_iterator_from_file(data_path)
             else:
                 return (None, 0)
+        if ptr_iter is None:
+            if ptr_path is not None and side == "src" and ptr_path != data_path:
+                ptr_iter = SamDataset.make_ptr_iterator_from_file(ptr_path)
 
         if side == "tgt":
             # lol
@@ -176,7 +179,7 @@ class SamDataset(DatasetBase):
             # All examples have same number of features, so we peek first one
             # to get the num_feats.
             examples_nfeats_iter = \
-                SamDataset.make_examples(data_iter, truncate, side)
+                SamDataset.make_examples(data_iter, truncate, side, ptr_iter)
 
         first_ex = next(examples_nfeats_iter)
         num_feats = first_ex[1]
@@ -188,7 +191,7 @@ class SamDataset(DatasetBase):
         return (examples_iter, num_feats)
 
     @staticmethod
-    def make_examples(text_iter, truncate, side):
+    def make_examples(text_iter, truncate, side, ptr_iter):
         """
         Args:
             text_iter (iterator): iterator of text sequences
@@ -258,6 +261,11 @@ class SamDataset(DatasetBase):
                         v = v,
                         h = id2city[id] == x["home_city"],
                     ))
+            # ptr
+            if ptr_iter is not None:
+                ptr = next(ptr_iter)
+                import pdb; pdb.set_trace()
+                # TODO(justinchiu): finish
             example_dict = {
                 "src": relations,
                 "indices": i,
@@ -280,6 +288,12 @@ class SamDataset(DatasetBase):
     def make_data_iterator_from_file(path):
         with codecs.open(path, "r") as corpus_file:
             return json.loads(corpus_file.read())
+
+    @staticmethod
+    def make_ptr_iterator_from_file(path):
+        with codecs.open(path, "r") as corpus_file:
+            for x in corpus_file:
+                yield [y.split(",") for y in x.strip().split()]
 
     @staticmethod
     def make_text_iterator_from_file(path):

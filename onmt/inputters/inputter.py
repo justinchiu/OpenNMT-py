@@ -211,7 +211,7 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
         elif data_type == 'sam':
             src_examples_iter, num_src_feats = \
                 SamDataset.make_data_examples_nfeats_tpl(
-                    src_data_iter, src_path, src_dir, "src")
+                    tgt_data_iter, tgt_path, src_dir, "src", src_data_iter, src_path)
 
         elif data_type == 'img':
             src_examples_iter, num_src_feats = \

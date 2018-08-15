@@ -1,6 +1,8 @@
 # rotowire (smaller)
 if [ -n "$odyssey" ]; then
-    text=/n/rush_lab/jc/code/data2text/boxscore-data/rotowire
+    # holylfs partition is super flaky.
+    #text=/n/rush_lab/jc/code/data2text/boxscore-data/rotowire
+    text=/n/home13/jchiu/projects/data2text/boxscore-data/rotowire
 else
     text=/home/justinchiu/research/data2text/boxscore-data/rotowire
 fi
@@ -14,9 +16,9 @@ preprocess_rw() {
     # since we don't want to share the vocab (do we?) and
     # the copying vocab is constant (and not dynamic)
     python preprocess.py \
-        -train_src ${text}/train.json \
-        -valid_src ${text}/valid.json \
+        -train_src ${text}/../../roto-ptrs.txt \
         -train_tgt ${text}/train.json \
+        -valid_src ${text}/valid.json \
         -valid_tgt ${text}/valid.json \
         -data_type sam \
         -tgt_vocab_size 80000 \
