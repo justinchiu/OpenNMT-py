@@ -86,51 +86,48 @@
 \section{Introduction}
 
 \section{Problem}
-We would like to learn a generative model
-over sentences $\bx = \{x_0, x_1, \ldots\}$ as well as distribution over latent tables $\bz$.  
+We would like to learn a conditional model
+over sentences $\by = \{y_0, y_1, \ldots\}$ and latent structure $\bz$
+given a table $\bx$.
 We are primarily interested in the respective conditional distributions:
-both the posterior distribution over tables given a sentence $p(\bz\mid\bx)$,
+both the posterior distribution over structure given a sentence and table $p(\bz\mid\by,\bx)$,
 which is an information extraction model,
-as well as the conditional distribution over summaries $p(\bx\mid\bx)$.
+as well as the conditional distribution over summaries
+$p(\by\mid\bx)=\Es{\bz\sim p(\bz\mid\bx)}{p(\by\mid\bz,\bx)}$.
 
 \section{Data to Document}
 The conditional copy model in \citet{wiseman2017d2t}
 
 \subsection{The Model}
-Let $x_t$ be the current token, $\bx_{0:t-1}$ all previous tokens,
-$z_t$ the prediction for the current score,
-and $\tilde{\bz}_{0:t-1}\in\R^{t-1}_+$ be all previous scores.
-The model takes the form a language model, where
-the distribution over the next token
-$$p(x_t\mid \bx_{0:t-1}, \tilde{\bz}_{0:t-1},z_t) = f([h_{l_t:t-1},h_t])$$
+Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 
 \section{Latent Table Model}
 \subsection{Generative Model}
-\begin{itemize}
-\item $p(z)$ Is the prior over table completions,
-which we will not focus on.
-Or should we?
-Can we set the prior to simply be the nearest neighbour plus some noise?
-\item $p(x|z)$ is the likelihood of the summary given the table.
-We use the conditional copy model as in \citet{wiseman2017d2t}.
-\item $q(z|x)$ is the posterior distribution over table completions given a summary.
-\end{itemize}
-
-\subsection{Learning Conjunctions}
-Introduce latent variable $\by$ and 
-
-\subsection{Extending the supervision}
+We decompose structure into content selection and ordering respectively:
+$\bz = \set{\bc, \pi}$.
+Actually, content selection might be bad and we may way to perform content selection and 
+ordering jointly.
 \begin{description}
-\item[Content Selection] $p(\bc\mid\bx)$ where $\bc\in\set{0,1}^n$. 
+\item[Content Selection]
+$p(\bc\mid\bx)$ where $\bc\in\set{0,1}^n$ is a distribution over
+binary masks over relations.
+If a mask value is 1 then that specific relation is used to produce 
+a summary.
 \item[Content Ordering]
 $p(\pi\mid\bc,\bx)$, where $\pi$ is a permutation matrix.
-We may model this implicitly using a language model over relations,
-i.e. debagging.
+We may model this implicitly with a language model over relations, i.e. debagging.
 Error: we may have repeated records.
 It may be possible that certain records are only referred to a single time
-while we should allow others to be used multiple times.
-\item[Relation Realization] $p(\by\mid\pi(\bc),\bx)$.
+while we should be available for use multiple times.
+\item[Relation Realization]
+$p(\by\mid\pi(\bc),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bc)[t],\bx))$.
 \end{description}
+\subsection{Information Extraction Model}
+Recall the information extraction model from \citet{wiseman2017d2t}. $q$
+
+\subsection{Learning Conjunctions}
+Introduce latent variable $\bh$ and 
+
 
 \section{Training and Inference}
 
