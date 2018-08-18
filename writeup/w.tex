@@ -86,6 +86,7 @@
 \section{Introduction}
 
 \section{Problem}
+<<<<<<< HEAD
 We would like to learn a conditional model
 over sentences $\by = \{y_0, y_1, \ldots\}$ and latent structure $\bz$
 given a table $\bx$.
@@ -94,12 +95,66 @@ both the posterior distribution over structure given a sentence and table $p(\bz
 which is an information extraction model,
 as well as the conditional distribution over summaries
 $p(\by\mid\bx)=\Es{\bz\sim p(\bz\mid\bx)}{p(\by\mid\bz,\bx)}$.
+=======
+We would like to learn a conditional model over sentences $\by = \{y_0, y_1, \ldots\}$
+and latent structure $\bz$ given a table $\bx$.  
+We are primarily interested in the respective conditional distributions:
+both the posterior distribution over tables given a sentence $p(\bz\mid\by,\bx)$,
+which is an information extraction model,
+as well as the conditional distribution over summaries $p(\by\mid\bz,\bx)$.
+>>>>>>> diagram
 
 \section{Data to Document}
 The conditional copy model in \citet{wiseman2017d2t}
 
 \subsection{The Model}
 Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
+<<<<<<< HEAD
+=======
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}[]{0.33\textwidth}
+\centering
+\begin{tikzpicture}
+\node(yt)[latent]{$y_t$};
+\node(xt)[det, left =of yt]{$\tilde\bx_t$};
+\node(at)[latent, below =of yt]{$a_t$};
+
+\edge {xt} {at};
+\edge {xt} {yt};
+\edge {at} {yt};
+\end{tikzpicture}
+\caption{Latent attention}
+\end{subfigure}
+\begin{subfigure}[]{0.33\textwidth}
+\centering
+\begin{tikzpicture}
+\node(y)[latent]{$y_t$};
+\node(x)[det, left =of yt]{$\tilde\bx_t$};
+\node(z)[det, below =of yt]{$a_t$};
+%\node(xt)[det,    right =of st]{$\tilde\bx_t$};
+\node(st)[latent, left =of at]{$s_t$};
+\node(ap)[latent, below =of st]{$a_{t-1}$};
+\node(ah)[latent, below =of at]{$\hat{a}_t$};
+
+\edge {xt} {ah};
+\edge {xt} {st};
+\edge {xt} {yt};
+\edge {ap} {at};
+\edge {ap} {st};
+\edge {st} {at};
+\edge {ah} {at};
+\edge {at} {yt};
+\end{tikzpicture}
+\caption{Latent segmental attention}
+\end{subfigure}
+\label{fig:dgm}
+\caption{Directed graphical models for the two simplest latent variable models.
+The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
+state $s_t$, and target word $y_t$.}
+\end{figure}
+>>>>>>> diagram
 
 \section{Latent Table Model}
 \subsection{Generative Model}
