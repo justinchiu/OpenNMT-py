@@ -84,6 +84,19 @@
 \maketitle
 
 \section{Introduction}
+Neural network-based language models have achieved top performance,
+allowing text generation models to become proficient at
+generating short snippets of fluent text.
+%However, we do not .
+
+Goals:
+\begin{itemize}
+\item No lying
+\item Modularity?
+\item Interpretability?
+\item If we remove burden from the language model, will it lie less?
+Only have the LM focus on fluency
+\end{itemize}
 
 \section{Problem}
 We would like to learn a conditional model
@@ -91,18 +104,18 @@ over sentences $\by = \{y_0, y_1, \ldots\}$ and latent structure $\bz$
 given a table $\bx$.
 We are primarily interested in the respective conditional distributions:
 both the posterior distribution over structure given a sentence and table $p(\bz\mid\by,\bx)$,
-which is an information extraction model,
 as well as the conditional distribution over summaries
 $p(\by\mid\bx)=\Es{\bz\sim p(\bz\mid\bx)}{p(\by\mid\bz,\bx)}$.
+Note that the posterior distribution over structure $p(\bz\mid\by,\bx)$
+is an information extraction model.
 
 \section{Data to Document}
-The conditional copy model in \citet{wiseman2017d2t}
+The conditional copy model in \citet{wiseman2017d2t}. 
 
 \subsection{The Model}
 Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 
 \begin{figure}[ht]
-\centering
 \centering
 \begin{tikzpicture}
 \node(x)[obs]{$\tilde\bx$};
@@ -148,6 +161,9 @@ $p(\by\mid\pi(\bc),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bc)[t],\bx))$.
 Recall the information extraction model from \citet{wiseman2017d2t}. $q$
 
 \subsection{Learning Conjunctions}
+Introduce latent variable $\bh$ and 
+
+\subsection{Noisy Channel?}
 Introduce latent variable $\bh$ and 
 
 
