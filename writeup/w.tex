@@ -110,7 +110,17 @@ Note that the posterior distribution over structure $p(\bz\mid\by,\bx)$
 is an information extraction model.
 
 \section{Data to Document}
-The conditional copy model in \citet{wiseman2017d2t}. 
+The copy models in \citet{wiseman2017d2t} are trained independently from the information extraction model. 
+The copy model is trained by generating the summary conditioned on the full table.
+The information extraction model used for evaluation is trained using labels
+created by comparing tokens in the summary with the entities and values from the database.
+See \citet{wiseman2017d2t} for all the tricks used in training the model.
+
+Our goal is to use more structure in our model in order to unburden the language model
+and prevent hallucination of facts.
+
+We assume that every sentence has an implicit labelling or cluster.
+
 
 \subsection{The Model}
 Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
@@ -136,8 +146,7 @@ The observed context is $\tilde\bx$, current attention $a_t$, previous attention
 state $s_t$, and target word $y_t$.}
 \end{figure}
 
-\section{Latent Table Model}
-\subsection{Generative Model}
+\section{Generative Model}
 We decompose structure into content selection and ordering respectively:
 $\bz = \set{\bc, \pi}$.
 Actually, content selection might be bad and we may way to perform content selection and 
@@ -163,6 +172,8 @@ Recall the information extraction model from \citet{wiseman2017d2t}. $q$
 
 \subsection{Learning Conjunctions}
 Introduce latent variable $\bh$ and 
+
+\subsection{Approximate Posterior or Posterior Regularization?}
 
 \subsection{Noisy Channel?}
 Introduce latent variable $\bh$ and 
