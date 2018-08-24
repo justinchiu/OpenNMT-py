@@ -118,7 +118,7 @@ Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 \begin{figure}[ht]
 \centering
 \begin{tikzpicture}
-\node(x)[obs]{$\tilde\bx$};
+\node(x)[obs]{$\bx$};
 \node(pi)[latent, below =of x]{$\pi$};
 \node(c)[latent, left =of pi]{$\bc$};
 \node(y)[latent, right =of pi]{$\by$};
@@ -157,6 +157,7 @@ while we should be available for use multiple times.
 \item[Relation Realization]
 $p(\by\mid\pi(\bc),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bc)[t],\bx))$.
 \end{description}
+
 \subsection{Information Extraction Model}
 Recall the information extraction model from \citet{wiseman2017d2t}. $q$
 
@@ -166,10 +167,11 @@ Introduce latent variable $\bh$ and
 \subsection{Noisy Channel?}
 Introduce latent variable $\bh$ and 
 
-
 \section{Training and Inference}
 
 \section{Related Work}
+
+\section{Results}
 
 \bibliographystyle{plainnat}
 \bibliography{w}
