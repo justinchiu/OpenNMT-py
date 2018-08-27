@@ -110,3 +110,5 @@ ENV/
 
 # Tensorboard
 runs/
+
+writeup/w.pdf
