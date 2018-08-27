@@ -59,6 +59,8 @@
 \newcommand{\be}{\mathbf{e}}
 \newcommand{\bg}{\mathbf{g}}
 \newcommand{\bh}{\mathbf{h}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bs}{\mathbf{s}}
 \newcommand{\bw}{\mathbf{w}}
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
@@ -87,27 +89,55 @@
 Neural network-based language models have achieved top performance,
 allowing text generation models to become proficient at
 generating short snippets of fluent text.
+Recent work has largely leveraged the strong language modeling capabilities of neural models \citep{wiseman2017d2t},
+while slowly incorporating the modularity of probabilistic models \citep{wiseman2018template}.
 %However, we do not .
 
-Goals:
+The field's focus has shifted from information extraction to generation as the (conditional) language modeling 
+capabilities of neural networks have continued to progress.
+
+Goals:\citet{wiseman2017d2t}, \citep{liang2009semalign}
 \begin{itemize}
-\item No lying
-\item Modularity?
-\item Interpretability?
 \item If we remove burden from the language model, will it lie less?
 Only have the LM focus on fluency
+\item Having a more structured model paves the way for more interpretable and
+modular additions to the system, such as numerical comparisons or list modules
 \end{itemize}
+
+% Maybe goal is to demonstrate the modularity of probabilistic models?
+% Need to also compare to soft model
+% Result might just be that it present a different inductive bias
+
+We would like to incorporate the modularity of a probabilistic framework into the powerful 
+autoregressive modeling capabilities of a neural language model.
+Although the approach brought only marginal benefits in \citet{deng2018vattn},
+it can potentially be applied in many other domains. 
+Alignment in translation allows model to properly condition on the source.
+
+
+% Concerned with jointly learning a generative model and information extraction system.
+% Is there an efficiency gain in using the approximate posterior as a separate system rather than finding 
+% viterbi best alignments?
 
 \section{Problem}
 We would like to learn a conditional model
-over sentences $\by = \{y_0, y_1, \ldots\}$ and latent structure $\bz$
-given a table $\bx$.
+over sentences $\by = \{y_0, y_1, \ldots\}$ and latent structure $\bz$ given a table $\bx$.
 We are primarily interested in the respective conditional distributions:
 both the posterior distribution over structure given a sentence and table $p(\bz\mid\by,\bx)$,
 as well as the conditional distribution over summaries
 $p(\by\mid\bx)=\Es{\bz\sim p(\bz\mid\bx)}{p(\by\mid\bz,\bx)}$.
 Note that the posterior distribution over structure $p(\bz\mid\by,\bx)$
 is an information extraction model.
+
+\section{Related Work}
+\citet{wiseman2017d2t}
+\citet{rabinovich17codegen}
+\citet{yarats2017dialogue}
+\citet{liang2009semalign} also use a conditional model of utterances and use a similar model of alignment.
+However, their model is more concerned with using the posterior for information extraction and 
+alignment with a database rather than both text generation as it does not include a language model. 
+Instead the words are modeled independently from each other given the underlying record structure.
+
 
 \section{Data to Document}
 The copy models in \citet{wiseman2017d2t} are trained independently from the information extraction model. 
@@ -120,7 +150,6 @@ Our goal is to use more structure in our model in order to unburden the language
 and prevent hallucination of facts.
 
 We assume that every sentence has an implicit labelling or cluster.
-
 
 \subsection{The Model}
 Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
@@ -148,34 +177,42 @@ state $s_t$, and target word $y_t$.}
 
 \section{Generative Model}
 We decompose structure into content selection and ordering respectively:
-$\bz = \set{\bc, \pi}$.
+$\bz = \set{\bs, \pi}$.
 Actually, content selection might be bad and we may way to perform content selection and 
 ordering jointly.
 \begin{description}
 \item[Content Selection]
-$p(\bc\mid\bx)$ where $\bc\in\set{0,1}^n$ is a distribution over
+$p(\bs\mid\bx)$ where $\bs\in\set{0,1}^n$ is a distribution over
 binary masks over relations.
 If a mask value is 1 then that specific relation is used to produce 
 a summary.
 \item[Content Ordering]
-$p(\pi\mid\bc,\bx)$, where $\pi$ is a permutation matrix.
+$p(\pi\mid\bs,\bx)$, where $\pi$ is a permutation matrix.
 We may model this implicitly with a language model over relations, i.e. debagging.
 Error: we may have repeated records.
 It may be possible that certain records are only referred to a single time
 while we should be available for use multiple times.
 \item[Relation Realization]
-$p(\by\mid\pi(\bc),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bc)[t],\bx))$.
+$p(\by\mid\pi(\bs),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bs)[t],\bx))$.
 \end{description}
 
-It may be better to simply 
+It may be better to simply use a language model
+\begin{description}
+\item[Segment Type]
+$p(c_t\mid \bc_{<t}, \bx)$
+\item[Record LM]
+$p(r_{t,i}\mid\br_{t,<i},c_t,\bx)$
+\item[Token LM]
+$p(y_{t,i,j})\mid\by_{t,i,<j},r_{t,i})$
+\end{description}
 
 \subsection{Information Extraction Model}
-Recall the information extraction model from \citet{wiseman2017d2t}. $q$
+Recall the information extraction model from \citet{wiseman2017d2t}.
+$q$
 
 \subsection{Learning Conjunctions}
 Introduce latent variable $\bh$ and 
 
-\subsection{Approximate Posterior or Posterior Regularization?}
 
 \subsection{Noisy Channel?}
 Introduce latent variable $\bh$ and 
@@ -184,6 +221,7 @@ Introduce latent variable $\bh$ and
 To start, we let $q(\bz\mid\\by,\bx)$ take the form of a
 delta function take the form of a segmentation.
 $$q(z_t\mid\by,\bx)=$$
+\subsection{Approximate Posterior or Posterior Regularization?}
 
 \section{Related Work}
 
