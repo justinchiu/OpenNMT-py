@@ -11,6 +11,7 @@ FLAGS="-pdf"
 all:$(TEX)
 	$(CC) $(FLAGS)
 	latexmk -c
+	latexmk -c
 
 clean:
 	latexmk -CA

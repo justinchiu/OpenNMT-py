@@ -86,15 +86,17 @@
 \maketitle
 
 \section{Introduction}
-Neural network-based language models have achieved top performance,
+Neural network-based language models have achieved top performance
+\citep{yang2017moslm},
 allowing text generation models to become proficient at
-generating short snippets of fluent text.
-Recent work has largely leveraged the strong language modeling capabilities of neural models \citep{wiseman2017d2t},
-while slowly incorporating the modularity of probabilistic models \citep{wiseman2018template}.
-%However, we do not .
-
-The field's focus has shifted from information extraction to generation as the (conditional) language modeling 
-capabilities of neural networks have continued to progress.
+generating short snippets of fluent text in applications such as translation \citep{bahdanau2014mt}.
+Recent work in language generation has largely relied on the strong language modeling capabilities
+of neural models \citep{wiseman2017d2t},
+while slowly returning to the modularity afforded by probabilistic models \citep{wiseman2018template,
+deng2018vattn}.
+However, in leveraging powerful language models,
+the field's focus has shifted from information extraction to generation as the (conditional)
+language modeling capabilities of neural networks have allowed models to learn fluency.
 
 Goals:\citet{wiseman2017d2t}, \citep{liang2009semalign}
 \begin{itemize}
@@ -112,12 +114,11 @@ We would like to incorporate the modularity of a probabilistic framework into th
 autoregressive modeling capabilities of a neural language model.
 Although the approach brought only marginal benefits in \citet{deng2018vattn},
 it can potentially be applied in many other domains. 
-Alignment in translation allows model to properly condition on the source.
-
+Alignment in translation allows models to properly condition on the source.
 
 % Concerned with jointly learning a generative model and information extraction system.
-% Is there an efficiency gain in using the approximate posterior as a separate system rather than finding 
-% viterbi best alignments?
+% Is there an efficiency gain in using the approximate posterior as
+% a separate system rather than finding viterbi best alignments?
 
 \section{Problem}
 We would like to learn a conditional model
@@ -133,14 +134,15 @@ is an information extraction model.
 \citet{wiseman2017d2t}
 \citet{rabinovich17codegen}
 \citet{yarats2017dialogue}
-\citet{liang2009semalign} also use a conditional model of utterances and use a similar model of alignment.
+\citet{liang2009semalign} also use a conditional model of utterances
+and use a similar model of alignment.
 However, their model is more concerned with using the posterior for information extraction and 
 alignment with a database rather than both text generation as it does not include a language model. 
 Instead the words are modeled independently from each other given the underlying record structure.
 
-
 \section{Data to Document}
-The copy models in \citet{wiseman2017d2t} are trained independently from the information extraction model. 
+The copy models in \citet{wiseman2017d2t} are trained independently from the
+information extraction model. 
 The copy model is trained by generating the summary conditioned on the full table.
 The information extraction model used for evaluation is trained using labels
 created by comparing tokens in the summary with the entities and values from the database.
@@ -159,13 +161,13 @@ Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 \begin{tikzpicture}
 \node(x)[obs]{$\bx$};
 \node(pi)[latent, below =of x]{$\pi$};
-\node(c)[latent, left =of pi]{$\bc$};
+\node(s)[latent, left =of pi]{$\bs$};
 \node(y)[latent, right =of pi]{$\by$};
 
-\edge {x} {c};
+\edge {x} {s};
 \edge {x} {pi};
 \edge {x} {y};
-\edge {c} {pi};
+\edge {s} {pi};
 \edge {pi} {y};
 
 \end{tikzpicture}
@@ -175,15 +177,49 @@ The observed context is $\tilde\bx$, current attention $a_t$, previous attention
 state $s_t$, and target word $y_t$.}
 \end{figure}
 
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(c)[latent, left =of pi]{$\bc$};
+\node(y)[latent, right =of pi]{$\by$};
+
+\edge {x} {c};
+\edge {x} {pi};
+\edge {x} {y};
+\edge {c} {r};
+\edge {c} {y};
+\edge {r} {y};
+
+\end{tikzpicture}
+\label{fig:dgm}
+\caption{Directed graphical models for the two simplest latent variable models.
+The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
+state $s_t$, and target word $y_t$.}
+\end{figure}
+
 \section{Generative Model}
-We decompose structure into content selection and ordering respectively:
-$\bz = \set{\bs, \pi}$.
-Actually, content selection might be bad and we may way to perform content selection and 
-ordering jointly.
+We present two conditional models, both extensions of \citet{liang2009semalign}'s
+simple model that incorporate a neural language model.
+We decompose structure into content selection and ordering respectively: $\bz = \set{\bs, \pi}$.
+
+\section{Bottom-up Generative Model}
+\subsection{Content Selection}
+We define a distribution over records $p(\bs\mid\bx)$ where
+$\bs\in\set{0,1}^n$ represents the set of binary masks over records in $\bx$.
+
+\subsection{Record HSMM}
+We can model the alignment of records to segments of text with a hidden semi-markov model (HSMM)
+$p(\by,\br\mid\bs,\bx)$, similar to \citet{liang2009semalign} model.
+However, we instead model the observations $\by$ with a fully-connected model,
+with dependencies in-between segments.
+
+
+\subsection{Permutation-Based Record Model}
+Alternatively, we could 
 \begin{description}
 \item[Content Selection]
-$p(\bs\mid\bx)$ where $\bs\in\set{0,1}^n$ is a distribution over
-binary masks over relations.
 If a mask value is 1 then that specific relation is used to produce 
 a summary.
 \item[Content Ordering]
@@ -196,23 +232,25 @@ while we should be available for use multiple times.
 $p(\by\mid\pi(\bs),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bs)[t],\bx))$.
 \end{description}
 
-It may be better to simply use a language model
+\section{Hierarchical Generative Model}
+It may be better to simply use an autoregressive model of the hidden state.
 \begin{description}
 \item[Segment Type]
+We start with a markov model $p(c_t\mid \bc_{t-1}, \bx)$
 $p(c_t\mid \bc_{<t}, \bx)$
 \item[Record LM]
 $p(r_{t,i}\mid\br_{t,<i},c_t,\bx)$
 \item[Token LM]
-$p(y_{t,i,j})\mid\by_{t,i,<j},r_{t,i})$
+$p(y_{t,i,j})\mid\by_{t,i,<j},\by_{t,<i},r_{t,i})$
 \end{description}
 
-\subsection{Information Extraction Model}
+\section{Information Extraction Model}
 Recall the information extraction model from \citet{wiseman2017d2t}.
 $q$
 
-\subsection{Learning Conjunctions}
-Introduce latent variable $\bh$ and 
-
+\subsection{Table Completions: Learning Conjunctions}
+Introduce latent variables $\bh_i\sim\Bern(\theta_i),i\in\set{0,\ldots,K}$
+where $K$ is a hyperparameter. 
 
 \subsection{Noisy Channel?}
 Introduce latent variable $\bh$ and 
