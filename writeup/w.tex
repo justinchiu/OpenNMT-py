@@ -17,6 +17,7 @@
 % Tikz
 \usepackage{tikz}
 \usetikzlibrary{bayesnet}
+\usetikzlibrary{arrows}
 
 \usepackage{wrapfig}
 \usepackage{comment}
@@ -86,8 +87,17 @@
 \maketitle
 
 \section{Introduction}
-Neural network-based language models have achieved top performance
-\citep{yang2017moslm},
+\begin{comment}
+Story:
+In the early 2000's we had modular probabilistic models,
+but the focus was on information extraction and alignment.
+Now that we have powerful language models and classification methods,
+the focus has instead shifted to text generation.
+However the shift towards language modeling has de-emphasized the role of
+modularity in modeling and resulted in largel black-box models with little structure. 
+\end{comment}
+
+Neural network-based language models have achieved top performance \citep{yang2017moslm},
 allowing text generation models to become proficient at
 generating short snippets of fluent text in applications such as translation \citep{bahdanau2014mt}.
 Recent work in language generation has largely relied on the strong language modeling capabilities
@@ -131,14 +141,32 @@ Note that the posterior distribution over structure $p(\bz\mid\by,\bx)$
 is an information extraction model.
 
 \section{Related Work}
-\citet{wiseman2017d2t}
-\citet{rabinovich17codegen}
-\citet{yarats2017dialogue}
-\citet{liang2009semalign} also use a conditional model of utterances
-and use a similar model of alignment.
+% Information Extraction methods
+\citet{liang2009semalign} also use a conditional model of utterances and use a similar model of alignment.
 However, their model is more concerned with using the posterior for information extraction and 
 alignment with a database rather than both text generation as it does not include a language model. 
 Instead the words are modeled independently from each other given the underlying record structure.
+
+% Generation Methods
+The model in \citet{wiseman2017d2t} uses a conditional language model with a copy mechanism
+to model summaries given a list of records.
+Although the resulting generations are quite fluent, they are not
+as faithful to the underlying table as baseline template models which copy from
+records deterministically.
+
+% Unsupervised Typing
+The model of \citet{rabinovich17codegen}, used for code generation and semantic parsing,
+has a very similar flavour.
+It assumes a similar underlying generative process, although the conditioning is different:
+to produce a program given a natural language statement,
+first decide which class of constructor to use then recursively fill in the fields.
+However, in our model we are not given pre-specified constructor classes and
+we do not have recursive expressions.
+
+% Hierarchical Model
+Although the hierarchical model in \citet{yarats2017dialogue} is a HSMM,
+the domain and training method are quite different?
+Also not doubly hierarchical. %LMAO
 
 \section{Data to Document}
 The copy models in \citet{wiseman2017d2t} are trained independently from the
@@ -189,7 +217,7 @@ state $s_t$, and target word $y_t$.}
 \edge {x} {pi};
 \edge {x} {y};
 \edge {c} {r};
-\edge {c} {y};
+\edge [bend right=45] {c} {y};
 \edge {r} {y};
 
 \end{tikzpicture}
@@ -220,8 +248,7 @@ with dependencies in-between segments.
 Alternatively, we could 
 \begin{description}
 \item[Content Selection]
-If a mask value is 1 then that specific relation is used to produce 
-a summary.
+If a mask value is 1 then that specific relation is used to produce a summary.
 \item[Content Ordering]
 $p(\pi\mid\bs,\bx)$, where $\pi$ is a permutation matrix.
 We may model this implicitly with a language model over relations, i.e. debagging.
@@ -233,7 +260,12 @@ $p(\by\mid\pi(\bs),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bs)[t],\bx))$.
 \end{description}
 
 \section{Hierarchical Generative Model}
-It may be better to simply use an autoregressive model of the hidden state.
+Given that many sentences can be clustered into classes, for example
+many sentences list a single player's statistics during the game or 
+compare the final scores of the two teams and proclaim a winner,
+we propose to model a super-segmentation of groups of records.
+We first make the simplifying assumption that a super-segmentation is a sentence.
+
 \begin{description}
 \item[Segment Type]
 We start with a markov model $p(c_t\mid \bc_{t-1}, \bx)$
