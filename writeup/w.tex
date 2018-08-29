@@ -242,6 +242,7 @@ We can model the alignment of records to segments of text with a hidden semi-mar
 $p(\by,\br\mid\bs,\bx)$, similar to \citet{liang2009semalign} model.
 However, we instead model the observations $\by$ with a fully-connected model,
 with dependencies in-between segments.
+Note that the field selection model is implicitly parameterized by the copy mechanism.
 
 
 \subsection{Permutation-Based Record Model}
@@ -268,13 +269,26 @@ where each text is then generated from records via another HSMM.
 We first make the simplifying assumption that a super-segmentation is a sentence.
 
 \begin{description}
-\item[Segment Type]
-We start with a markov model over classes $p(c_t\mid c_{t-1},y_{t-1},\bx)$,
-where 
-$p(c_t\mid \bc_{<t}, \bx)$
-\item[Record LM]
+\item[Class choice]
+We start with a model over segment classes $p(c_t\mid c_{t-1},y_{t-1},\bx)$,
+where we transition to a new class if $y_{t-1}$ is the end of sentence token:
+$$p(c_t\mid c_{t-1},y_{t-1},\bx) = \begin{cases}
+c_t & y_{t-1}=\textrm{eos}\\
+p(c_t\mid c_{t-1},\bx) & \textrm{otherwise}
+\end{cases}$$
+We could potentially use a fully connected model if we are willing to sacrifice
+exact inference $p(c_t\mid \bc_{<t}, \bx)$, which would be realized by a neural
+language model over segment classes.
+Actually, if we use again use a soft model over $\bc_{<t}$ we can do this tractably,
+i.e. use the filtered marginals as input to an RNN:
+$p(z_t=i\mid z_{t-1}=j; \E{\bz_{<t-1}}) = \textrm{softmax}(i * \textrm{RNN}(j, \E{\bz_{<t-1}}))$.
+We model the initial distribution over classes $\pi(c_0\mid\bx)$
+via a neural network over the list of records.
+\item[Record choice]
+We begin with a markov model over records as in \citet{liang2009semalign}
+$p(r_t\mid r_{t-1},c_t,\bx)$.
 $p(r_{t,i}\mid\br_{t,<i},c_t,\bx)$
-\item[Token LM]
+\item[Token choice]
 $p(y_{t,i,j})\mid\by_{t,i,<j},\by_{t,<i},r_{t,i})$
 \end{description}
 
