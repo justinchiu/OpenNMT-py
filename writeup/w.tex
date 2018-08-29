@@ -263,12 +263,14 @@ $p(\by\mid\pi(\bs),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bs)[t],\bx))$.
 Given that many sentences can be clustered into classes, for example
 many sentences list a single player's statistics during the game or 
 compare the final scores of the two teams and proclaim a winner,
-we propose to model a super-segmentation of groups of records.
+we propose to model a super-segmentation of groups of records with a HSMM,
+where each text is then generated from records via another HSMM.
 We first make the simplifying assumption that a super-segmentation is a sentence.
 
 \begin{description}
 \item[Segment Type]
-We start with a markov model $p(c_t\mid \bc_{t-1}, \bx)$
+We start with a markov model over classes $p(c_t\mid c_{t-1},y_{t-1},\bx)$,
+where 
 $p(c_t\mid \bc_{<t}, \bx)$
 \item[Record LM]
 $p(r_{t,i}\mid\br_{t,<i},c_t,\bx)$
