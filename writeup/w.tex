@@ -87,23 +87,51 @@
 \maketitle
 
 \section{Introduction}
-\begin{comment}
+\subsection{ideas}
+Why should we care about text generation?
+
 Story:
 In the early 2000's we had modular probabilistic models,
 but the focus was on information extraction and alignment.
 Now that we have powerful language models and classification methods,
 the focus has instead shifted to text generation.
 However the shift towards language modeling has de-emphasized the role of
-modularity in modeling and resulted in largel black-box models with little structure. 
-\end{comment}
+modularity in modeling and resulted in large black-box models with little structure. 
+\citep{wiseman2017d2t}
+
+Past work ie \citep{liang2009semalign} modular approach
+Current: blackbox throw everything into the language model
+\citep{wiseman2017d2t}
+Talk about the evaluation metrics, CO, CS, Realization?
+And how that inspires a generative model
+
+\begin{enumerate}
+\item Controllable, discourse-level features?
+Or more like just program induction-y structure
+\citet{rabinovich17codegen}
+\item Hierarchical generation with weak supervision enforced through posterior regularization
+\citep{ganchev2007empc,graca2010pralign,ganchev2010posteriorregularization}
+\item Learning higher order features of data table
+\item Also, examine the effect of explaining away on fidelity of
+generations to underlying records (via noisy channel)
+\citep{klein2002conditional,yu2016noisychannel,brown1993mt}
+\end{enumerate}
+
+\subsection{real}
+
+We aim to increase the modularity of our probabilistic model in order to leverage weak supervision
+\citep{ganchev2010posteriorregularization}.
+
+An open question in language generation is how to incorporate weaker forms of supervision.
+Modular graphical models offer a principled way of incorporating weak or indirect supervision
+through posterior regularization \citep{ganchev2007empc,graca2010pralign,ganchev2010posteriorregularization}.
 
 Neural network-based language models have achieved top performance \citep{yang2017moslm},
 allowing text generation models to become proficient at
 generating short snippets of fluent text in applications such as translation \citep{bahdanau2014mt}.
 Recent work in language generation has largely relied on the strong language modeling capabilities
 of neural models \citep{wiseman2017d2t},
-while slowly returning to the modularity afforded by probabilistic models \citep{wiseman2018template,
-deng2018vattn}.
+while slowly returning to the modularity afforded by probabilistic models \citep{wiseman2018template,deng2018vattn}.
 However, in leveraging powerful language models,
 the field's focus has shifted from information extraction to generation as the (conditional)
 language modeling capabilities of neural networks have allowed models to learn fluency.
@@ -188,33 +216,12 @@ Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 \centering
 \begin{tikzpicture}
 \node(x)[obs]{$\bx$};
-\node(pi)[latent, below =of x]{$\pi$};
-\node(s)[latent, left =of pi]{$\bs$};
-\node(y)[latent, right =of pi]{$\by$};
-
-\edge {x} {s};
-\edge {x} {pi};
-\edge {x} {y};
-\edge {s} {pi};
-\edge {pi} {y};
-
-\end{tikzpicture}
-\label{fig:dgm}
-\caption{Directed graphical models for the two simplest latent variable models.
-The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
-state $s_t$, and target word $y_t$.}
-\end{figure}
-
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}
-\node(x)[obs]{$\bx$};
 \node(r)[latent, below =of x]{$\br$};
-\node(c)[latent, left =of pi]{$\bc$};
-\node(y)[latent, right =of pi]{$\by$};
+\node(c)[latent, left =of r]{$\bc$};
+\node(y)[latent, right =of r]{$\by$};
 
 \edge {x} {c};
-\edge {x} {pi};
+\edge {x} {r};
 \edge {x} {y};
 \edge {c} {r};
 \edge [bend right=45] {c} {y};
@@ -227,40 +234,32 @@ The observed context is $\tilde\bx$, current attention $a_t$, previous attention
 state $s_t$, and target word $y_t$.}
 \end{figure}
 
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(rt)[latent, below =of x]{$r_t$};
+\node(ct)[latent, left =of r]{$c_t$};
+\node(yt)[latent, right =of r]{$y_t$};
+
+\edge {x} {ct};
+\edge {x} {rt};
+\edge {x} {yt};
+\edge {ct} {rt};
+\edge [bend right=45] {ct} {yt};
+\edge {rt} {yt};
+
+\end{tikzpicture}
+\label{fig:dgm}
+\caption{Directed graphical models for the two simplest latent variable models.
+The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
+state $s_t$, and target word $y_t$.}
+\end{figure}
+
 \section{Generative Model}
-We present two conditional models, both extensions of \citet{liang2009semalign}'s
-simple model that incorporate a neural language model.
-We decompose structure into content selection and ordering respectively: $\bz = \set{\bs, \pi}$.
+We present a conditional model that is an extension of \citet{liang2009semalign}'s
+simple model that incorporates a neural language model.
 
-\section{Bottom-up Generative Model}
-\subsection{Content Selection}
-We define a distribution over records $p(\bs\mid\bx)$ where
-$\bs\in\set{0,1}^n$ represents the set of binary masks over records in $\bx$.
-
-\subsection{Record HSMM}
-We can model the alignment of records to segments of text with a hidden semi-markov model (HSMM)
-$p(\by,\br\mid\bs,\bx)$, similar to \citet{liang2009semalign} model.
-However, we instead model the observations $\by$ with a fully-connected model,
-with dependencies in-between segments.
-Note that the field selection model is implicitly parameterized by the copy mechanism.
-
-
-\subsection{Permutation-Based Record Model}
-Alternatively, we could 
-\begin{description}
-\item[Content Selection]
-If a mask value is 1 then that specific relation is used to produce a summary.
-\item[Content Ordering]
-$p(\pi\mid\bs,\bx)$, where $\pi$ is a permutation matrix.
-We may model this implicitly with a language model over relations, i.e. debagging.
-Error: we may have repeated records.
-It may be possible that certain records are only referred to a single time
-while we should be available for use multiple times.
-\item[Relation Realization]
-$p(\by\mid\pi(\bs),\bx) = \prod_t p(y_t\mid\by_{<t}\pi(\bs)[t],\bx))$.
-\end{description}
-
-\section{Hierarchical Generative Model}
 Given that many sentences can be clustered into classes, for example
 many sentences list a single player's statistics during the game or 
 compare the final scores of the two teams and proclaim a winner,
@@ -285,12 +284,20 @@ $p(z_t=i\mid z_{t-1}=j; \E{\bz_{<t-1}}) = \textrm{softmax}(i * \textrm{RNN}(j, \
 We model the initial distribution over classes $\pi(c_0\mid\bx)$
 via a neural network over the list of records.
 \item[Record choice]
-We begin with a markov model over records as in \citet{liang2009semalign}
-$p(r_t\mid r_{t-1},c_t,\bx)$.
+We begin with a markov model over records as in \citet{liang2009semalign} $p(r_t\mid r_{t-1},c_t,\bx)$.
 $p(r_{t,i}\mid\br_{t,<i},c_t,\bx)$
 \item[Token choice]
 $p(y_{t,i,j})\mid\by_{t,i,<j},\by_{t,<i},r_{t,i})$
 \end{description}
+the first is assume that words $y_t$ are aligned to either a subset of records in $r_{0:N}$ or a null record
+recall that a record is a tuple of type {ie POINTS}, entity {Jason Kidd}, value {19}
+
+so given that subset we could then parameterize a categorical distribution over its elements.
+let $p(pi | c, r_{0:N})$ be a distribution over binary masks ${0,1}^N$. 
+we could decompose $p(r_t | c_t, r_{0:N}) = p(r_t | pi(r_{0:N})) * p(pi | c, r_{0:N})$,
+where we would then use posterior regularization: train $p(pi | c, r_{0:N})$ to match
+$\textrm{findRecord}(y_t)$ and learn
+$p(r_t | pi(r_{0:N}))$ through max marginal likelihood using $\textrm{findRecord}(y_t)$ to give us $\pi$.
 
 \section{Information Extraction Model}
 Recall the information extraction model from \citet{wiseman2017d2t}.
@@ -304,9 +311,12 @@ where $K$ is a hyperparameter.
 Introduce latent variable $\bh$ and 
 
 \section{Training and Inference}
-To start, we let $q(\bz\mid\\by,\bx)$ take the form of a
+To start, we let $q(\bz\mid\by,\bx)$ take the form of a
 delta function take the form of a segmentation.
 $$q(z_t\mid\by,\bx)=$$
+we can align every word $y_t$ by looking at every record $r_{0:N}$ and checking if $y_t$ matches $r_i.entity$ or $r_i.value$
+so let
+$$\textrm{findRecord}(y_t) = \set{ r_i \mid r_i.entity = y_t OR r_i.value = y_t }$$
 \subsection{Approximate Posterior or Posterior Regularization?}
 
 \section{Related Work}
