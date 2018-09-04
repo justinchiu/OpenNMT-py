@@ -1,4 +1,4 @@
-\begin{thebibliography}{8}
+\begin{thebibliography}{14}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -12,11 +12,47 @@ Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio.
 \newblock \emph{CoRR}, abs/1409.0473, 2014.
 \newblock URL \url{http://arxiv.org/abs/1409.0473}.
 
+\bibitem[Brown et~al.(1993)Brown, Pietra, Pietra, and Mercer]{brown1993mt}
+Peter~F. Brown, Vincent J.~Della Pietra, Stephen A.~Della Pietra, and Robert~L.
+  Mercer.
+\newblock The mathematics of statistical machine translation: Parameter
+  estimation.
+\newblock \emph{Comput. Linguist.}, 19\penalty0 (2):\penalty0 263--311, June
+  1993.
+\newblock ISSN 0891-2017.
+\newblock URL \url{http://dl.acm.org/citation.cfm?id=972470.972474}.
+
 \bibitem[Deng et~al.(2018)Deng, Kim, Chiu, Guo, and Rush]{deng2018vattn}
 Yuntian Deng, Yoon Kim, Justin Chiu, Demi Guo, and Alexander~M. Rush.
 \newblock Latent alignment and variational attention.
 \newblock \emph{CoRR}, abs/1807.03756, 2018.
 \newblock URL \url{http://arxiv.org/abs/1807.03756}.
+
+\bibitem[Ganchev et~al.(2008)Ganchev, Taskar, and {a}o Gama]{ganchev2007empc}
+Kuzman Ganchev, Ben Taskar, and Jo\ {a}o Gama.
+\newblock Expectation maximization and posterior constraints.
+\newblock In J.~C. Platt, D.~Koller, Y.~Singer, and S.~T. Roweis, editors,
+  \emph{Advances in Neural Information Processing Systems 20}, pages 569--576.
+  Curran Associates, Inc., 2008.
+\newblock URL
+  \url{http://papers.nips.cc/paper/3170-expectation-maximization-and-posterior-constraints.pdf}.
+
+\bibitem[Ganchev et~al.(2010)Ganchev, Gra\c{c}a, Gillenwater, and
+  Taskar]{ganchev2010posteriorregularization}
+Kuzman Ganchev, Jo\~{a}o Gra\c{c}a, Jennifer Gillenwater, and Ben Taskar.
+\newblock Posterior regularization for structured latent variable models.
+\newblock \emph{J. Mach. Learn. Res.}, 11:\penalty0 2001--2049, August 2010.
+\newblock ISSN 1532-4435.
+\newblock URL \url{http://dl.acm.org/citation.cfm?id=1756006.1859918}.
+
+\bibitem[Klein and Manning(2002)]{klein2002conditional}
+Dan Klein and Christopher~D. Manning.
+\newblock Conditional structure versus conditional estimation in nlp models.
+\newblock In \emph{Proceedings of the ACL-02 Conference on Empirical Methods in
+  Natural Language Processing - Volume 10}, EMNLP '02, pages 9--16,
+  Stroudsburg, PA, USA, 2002. Association for Computational Linguistics.
+\newblock \doi{10.3115/1118693.1118695}.
+\newblock URL \url{https://doi.org/10.3115/1118693.1118695}.
 
 \bibitem[Liang et~al.(2009)Liang, Jordan, and Klein]{liang2009semalign}
 Percy Liang, Michael~I. Jordan, and Dan Klein.
@@ -35,6 +71,16 @@ Maxim Rabinovich, Mitchell Stern, and Dan Klein.
 \newblock Abstract syntax networks for code generation and semantic parsing.
 \newblock \emph{CoRR}, abs/1704.07535, 2017.
 \newblock URL \url{http://arxiv.org/abs/1704.07535}.
+
+\bibitem[V.~Gra\c{c}a et~al.(2010)V.~Gra\c{c}a, Ganchev, and
+  Taskar]{graca2010pralign}
+Jo\~{a}o V.~Gra\c{c}a, Kuzman Ganchev, and Ben Taskar.
+\newblock Learning tractable word alignment models with complex constraints.
+\newblock \emph{Comput. Linguist.}, 36\penalty0 (3):\penalty0 481--504,
+  September 2010.
+\newblock ISSN 0891-2017.
+\newblock \doi{10.1162/coli_a_00007}.
+\newblock URL \url{http://dx.doi.org/10.1162/coli_a_00007}.
 
 \bibitem[Wiseman(2018)]{wiseman2018template}
 Sam Wiseman.
@@ -57,5 +103,13 @@ Denis Yarats and Mike Lewis.
 \newblock Hierarchical text generation and planning for strategic dialogue.
 \newblock \emph{CoRR}, abs/1712.05846, 2017.
 \newblock URL \url{http://arxiv.org/abs/1712.05846}.
+
+\bibitem[Yu et~al.(2016)Yu, Blunsom, Dyer, Grefenstette, and
+  Kocisk{\'{y}}]{yu2016noisychannel}
+Lei Yu, Phil Blunsom, Chris Dyer, Edward Grefenstette, and Tom{\'{a}}s
+  Kocisk{\'{y}}.
+\newblock The neural noisy channel.
+\newblock \emph{CoRR}, abs/1611.02554, 2016.
+\newblock URL \url{http://arxiv.org/abs/1611.02554}.
 
 \end{thebibliography}
