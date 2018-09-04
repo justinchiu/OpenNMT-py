@@ -214,6 +214,21 @@ Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 
 \begin{figure}[ht]
 \centering
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(y)[latent, right =of r]{$\by$};
+\edge {x} {r};
+\edge {r} {y};
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+
+\hspace{0.03\textwidth}
+\begin{subfigure}[]{0.3\textwidth}
+\centering
 \begin{tikzpicture}
 \node(x)[obs]{$\bx$};
 \node(r)[latent, below =of x]{$\br$};
@@ -228,32 +243,68 @@ Let $y_t$ be the current token, $\by_{0:t-1}$ all previous tokens,
 \edge {r} {y};
 
 \end{tikzpicture}
+\caption{}
+\end{subfigure}
+\hspace{0.03\textwidth}
+
+\begin{comment}
+% Noisy channel model
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(c)[latent, left =of r]{$\bc$};
+\node(y)[latent, right =of r]{$\by$};
+
+\edge {x} {c};
+\edge {x} {r};
+\edge {x} {y};
+\edge {c} {r};
+\edge [bend right=45] {c} {y};
+\edge {y} {r};
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+\end{comment}
+
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(c0)[latent]{$c_0$};
+\node(r0)[latent, below =of c0]{$r_0$};
+\node(y0)[latent, below =of r0]{$y_0$};
+\node(c1)[latent, right =of c0]{$c_1$};
+\node(r1)[latent, below =of c1]{$r_1$};
+\node(y1)[latent, below =of r1]{$y_1$};
+
+\edge {c0} {r0};
+\edge [bend right=45] {c0} {y0};
+\edge {r0} {y0};
+
+\edge {c1} {r1};
+\edge [bend left=45] {c1} {y1};
+\edge {r1} {y1};
+
+\edge {c0} {c1};
+\edge {r0} {r1};
+\edge {y0} {y1};
+
+\edge {y0} {c1};
+
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
 \label{fig:dgm}
-\caption{Directed graphical models for the two simplest latent variable models.
+\caption{Simplistic directed graphical models for the latent variable model.
 The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
 state $s_t$, and target word $y_t$.}
 \end{figure}
 
 \begin{figure}[ht]
-\centering
-\begin{tikzpicture}
-\node(x)[obs]{$\bx$};
-\node(rt)[latent, below =of x]{$r_t$};
-\node(ct)[latent, left =of r]{$c_t$};
-\node(yt)[latent, right =of r]{$y_t$};
-
-\edge {x} {ct};
-\edge {x} {rt};
-\edge {x} {yt};
-\edge {ct} {rt};
-\edge [bend right=45] {ct} {yt};
-\edge {rt} {yt};
-
-\end{tikzpicture}
-\label{fig:dgm}
-\caption{Directed graphical models for the two simplest latent variable models.
-The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
-state $s_t$, and target word $y_t$.}
+\label{fig:dgm2}
+\caption{The time-series graphical model.
+As all nodes condition on $\bx$, we omit it from the diagram.}
 \end{figure}
 
 \section{Generative Model}
