@@ -135,6 +135,7 @@ while slowly returning to the modularity afforded by probabilistic models \citep
 However, in leveraging powerful language models,
 the field's focus has shifted from information extraction to generation as the (conditional)
 language modeling capabilities of neural networks have allowed models to learn fluency.
+\citep{puduppully2018contentselection}
 
 Goals:\citet{wiseman2017d2t}, \citep{liang2009semalign}
 \begin{itemize}
@@ -376,9 +377,123 @@ $$\textrm{findRecord}(y_t) = \set{ r_i \mid r_i.entity = y_t OR r_i.value = y_t 
 
 \section{NSF STUFF}
 \section{Background}
+Natural language processing (NLP) can largely be decomposed into two separate but
+tightly related tasks: natural language understanding and natural language generation (NLG).
+In this proposal we focus primarily on text generation.
+Early work on text generation focused on the use of templates and grammars, 
+which are hand-written sentences with blanks that models would then
+fill in to complete the generative process.
+Subsequently, 
+A vein in the recent work on integrating neural network systems and latent variable models
+has aimed to separate content from style.
+
+Separate style and content, where content will come from for controllable generation.
+Can we also model intention in a similar way?
+\section{Related Work}
+In the task of generating basketball summaries from game statistics,
+\citet{puduppully2018contentselection} learn a model of content progression
+by learning how to order records from the table of statistics.
+\citep{puduppully2018contentselection,wiseman2018template}
 \section{Research Question}
+Given that we can model `what to say' as well as `how to say',
+can we learn a model of intention?
 \section{Keywords}
 \section{Approach and Methods}
+\begin{figure}[ht]
+\centering
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(y)[latent, right =of r]{$\by$};
+\edge {x} {r};
+\edge {r} {y};
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+
+\hspace{0.03\textwidth}
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(c)[latent, left =of r]{$\bc$};
+\node(y)[latent, right =of r]{$\by$};
+
+\edge {x} {c};
+\edge {x} {r};
+\edge {x} {y};
+\edge {c} {r};
+\edge [bend right=45] {c} {y};
+\edge {r} {y};
+
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+\hspace{0.03\textwidth}
+
+\begin{comment}
+% Noisy channel model
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(x)[obs]{$\bx$};
+\node(r)[latent, below =of x]{$\br$};
+\node(c)[latent, left =of r]{$\bc$};
+\node(y)[latent, right =of r]{$\by$};
+
+\edge {x} {c};
+\edge {x} {r};
+\edge {x} {y};
+\edge {c} {r};
+\edge [bend right=45] {c} {y};
+\edge {y} {r};
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+\end{comment}
+
+\begin{subfigure}[]{0.3\textwidth}
+\centering
+\begin{tikzpicture}
+\node(c0)[latent]{$c_0$};
+\node(r0)[latent, below =of c0]{$r_0$};
+\node(y0)[latent, below =of r0]{$y_0$};
+\node(c1)[latent, right =of c0]{$c_1$};
+\node(r1)[latent, below =of c1]{$r_1$};
+\node(y1)[latent, below =of r1]{$y_1$};
+
+\edge {c0} {r0};
+\edge [bend right=45] {c0} {y0};
+\edge {r0} {y0};
+
+\edge {c1} {r1};
+\edge [bend left=45] {c1} {y1};
+\edge {r1} {y1};
+
+\edge {c0} {c1};
+\edge {r0} {r1};
+\edge {y0} {y1};
+
+\edge {y0} {c1};
+
+\end{tikzpicture}
+\caption{}
+\end{subfigure}
+\label{fig:dgm}
+\caption{Simplistic directed graphical models for the latent variable model.
+The observed context is $\tilde\bx$, current attention $a_t$, previous attention $a_{t-1}$,
+state $s_t$, and target word $y_t$.}
+\end{figure}
+
+\begin{figure}[ht]
+\label{fig:dgm2}
+\caption{The time-series graphical model.
+As all nodes condition on $\bx$, we omit it from the diagram.}
+\end{figure}
+
 \section{Intellectual Merit}
 \section{Broader Impact}
 
