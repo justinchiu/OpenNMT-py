@@ -381,9 +381,13 @@ Natural language processing (NLP) can largely be decomposed into two separate bu
 tightly related tasks: natural language understanding and natural language generation (NLG).
 In this proposal we focus primarily on text generation.
 Early work on text generation focused on the use of templates and grammars, 
-which are hand-written sentences with blanks that models would then
-fill in to complete the generative process.
-Subsequently, 
+which generally resulted in generations with little stylistic variation.
+% Do I need to qualify this claim and say why?
+After neural language models demonstrated state of the art performance,
+neural models were then transferred to the conditional language modeling setting,
+i.e. NLG,
+where they supplanted template-based methods almost completely.
+
 A vein in the recent work on integrating neural network systems and latent variable models
 has aimed to separate content from style.
 
