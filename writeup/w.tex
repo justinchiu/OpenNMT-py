@@ -379,14 +379,37 @@ $$\textrm{findRecord}(y_t) = \set{ r_i \mid r_i.entity = y_t OR r_i.value = y_t 
 \section{Background}
 Natural language processing (NLP) can largely be decomposed into two separate but
 tightly related tasks: natural language understanding and natural language generation (NLG).
-In this proposal we focus primarily on text generation.
+In this proposal we focus primarily on text generation, and in particular
+the generation of text that summarizes a table of data.
+We refer to this specific task as Data-to-Text (D2T).
+
+% What exactly is D2T?
+An example of D2T is in \citet{wiseman2017d2t},
+where a model of textual summaries of a basketball game is modelled conditioned on
+the box score associated with that game.
+The box score consists of a list of records associating an entity with a value.
+Each record has a type which denotes the relationship between the entity and value
+contained in the record.
+
+% Why is D2T important?
+% Easily evaluable, good benchmark
+% Limited external knowledge
+% Largely concerned with reporting the information in the table
+
+
+% Proposal? Add more structure / modularity, principled inference...?
 Early work on text generation focused on the use of templates and grammars, 
 which generally resulted in generations with little stylistic variation.
 % Do I need to qualify this claim and say why?
 After neural language models demonstrated state of the art performance,
-neural models were then transferred to the conditional language modeling setting,
+they were then transferred to the conditional language modeling setting,
 i.e. NLG,
 where they supplanted template-based methods almost completely.
+However, by relying largely on the language modeling capabilities of neural networks,
+practitioners have eschewed modularity of the model for ease of inference.
+% Do I need to qualify this as well?
+
+
 
 A vein in the recent work on integrating neural network systems and latent variable models
 has aimed to separate content from style.
