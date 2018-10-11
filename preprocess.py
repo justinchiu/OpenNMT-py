@@ -51,7 +51,7 @@ def build_save_in_shards_using_shards_size(src_corpus, tgt_corpus, fields,
                                            corpus_type, opt):
     """
     Divide src_corpus and tgt_corpus into smaller multiples
-    src_copus and tgt corpus files, then build shards, each
+    src_corpus and tgt corpus files, then build shards, each
     shard will have opt.shard_size samples except last shard.
 
     The reason we do this is to avoid taking up too much memory due
@@ -97,6 +97,8 @@ def build_save_in_shards_using_shards_size(src_corpus, tgt_corpus, fields,
 
     ret_list = []
 
+    no_length_filter = corpus_type == "valid" and opt.leave_valid
+
     for index, src in enumerate(src_list):
         logger.info("Building shard %d." % index)
         dataset = inputters.build_dataset(
@@ -113,7 +115,8 @@ def build_save_in_shards_using_shards_size(src_corpus, tgt_corpus, fields,
             window_size=opt.window_size,
             window_stride=opt.window_stride,
             window=opt.window,
-            image_channel_size=opt.image_channel_size
+            image_channel_size=opt.image_channel_size,
+            use_filter_pred = not no_length_filter,
         )
 
         pt_file = "{:s}.{:s}.{:d}.pt".format(
@@ -155,6 +158,8 @@ def build_save_dataset(corpus_type, fields, opt):
                                                       corpus_type,
                                                       opt)
 
+    # Don't filter on valid
+    no_length_filter = corpus_type == "valid" and opt.leave_valid
     # For data_type == 'img' or 'audio', currently we don't do
     # preprocess sharding. We only build a monolithic dataset.
     # But since the interfaces are uniform, it would be not hard
@@ -164,8 +169,8 @@ def build_save_dataset(corpus_type, fields, opt):
         src_path=src_corpus,
         tgt_path=tgt_corpus,
         src_dir=opt.src_dir,
-        src_seq_length=opt.src_seq_length,
-        tgt_seq_length=opt.tgt_seq_length,
+        src_seq_length=opt.src_seq_length if not no_length_filter else 0,
+        tgt_seq_length=opt.tgt_seq_length if not no_length_filter else 0,
         src_seq_length_trunc=opt.src_seq_length_trunc,
         tgt_seq_length_trunc=opt.tgt_seq_length_trunc,
         dynamic_dict=opt.dynamic_dict,
@@ -173,7 +178,8 @@ def build_save_dataset(corpus_type, fields, opt):
         window_size=opt.window_size,
         window_stride=opt.window_stride,
         window=opt.window,
-        image_channel_size=opt.image_channel_size)
+        image_channel_size=opt.image_channel_size,
+        use_filter_pred = not no_length_filter)
 
     # We save fields in vocab.pt seperately, so make it empty.
     dataset.fields = []
@@ -228,7 +234,7 @@ def main():
     valid_dataset_files = build_save_dataset('valid', fields, opt)
 
     logger.info("Building & saving vocabulary...")
-    build_save_vocab(train_dataset_files + valid_dataset_files, fields, opt)
+    build_save_vocab(train_dataset_files, fields, opt)
 
 
 if __name__ == "__main__":
